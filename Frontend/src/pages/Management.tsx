@@ -1,65 +1,69 @@
 import { Link } from 'react-router-dom'
-import { Users, Mail, MapPin, ArrowRight, Crown, UserCog } from 'lucide-react'
+import { Users, Mail, MapPin, ArrowRight, Crown } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 
-interface Leader {
-  office: string
+interface BoardMember {
+  name: string
   title: string
-  initials: string
-  color: string
+  photo: string
+  bio: string
   email: string
-  location: string
-  duties: string
 }
 
-const executives: Leader[] = [
+const chairman: BoardMember = {
+  name: 'Dr. Kemi A. Emmina',
+  title: 'Chairman, Board of Directors',
+  photo: '/images/management/Dr-Kemi-Eminna.jpg',
+  bio: 'He is a lecturer in the Department of Religious Studies and Philosophy, Delta State University, Abraka, a former Special Adviser on Research and Documentation to the former Speaker of the Delta State House of Assembly, and a Past President of the University of Ibadan Alumni Association.',
+  email: 'board@univent.ui.edu.ng',
+}
+
+const directors: BoardMember[] = [
   {
-    office: 'Director',
-    title: 'Director, U.I. Ventures',
-    initials: 'DV',
-    color: 'bg-primary-950',
-    email: 'director.ventures@ui.edu.ng',
-    location: 'Ventures House, Oduduwa Road',
-    duties: 'Overall leadership of all six divisions, strategy, partnerships and reporting to the University management.',
+    name: 'Prof. Kayode Adebowale, FAS',
+    title: 'Director (Vice-Chancellor, University of Ibadan)',
+    photo: '/images/management/Prof-Kayode-Adebowale.jpg',
+    bio: 'The University of Ibadan is ably represented on the Board by Professor Adebowale, the Vice-Chancellor of this great citadel of learning. He is a Professor in the Department of Chemistry, Faculty of Science, and has contributed immensely to the growth of U.I. Ventures Limited.',
+    email: 'vc@ui.edu.ng',
   },
   {
-    office: 'Deputy',
-    title: 'Deputy Director (Operations)',
-    initials: 'DO',
-    color: 'bg-primary-700',
-    email: 'operations.ventures@ui.edu.ng',
-    location: 'Ventures House, Oduduwa Road',
-    duties: 'Day-to-day operations, quality control across divisions and customer experience on the marketplace.',
+    name: 'Prince Oluyemisi Adetayo Adeaga (JP)',
+    title: 'Director',
+    photo: '/images/management/Prince-Oluyemisi-Adetayo.jpg',
+    bio: 'He is a Financial Manager with a B.Sc in Business Administration and an MBA in Marketing. He has served many years as an accountant, business mogul, astute administrator and social worker, with a meritorious career progression in the Oyo State Civil Service from the Executive cadre to the Auditor cadre and then Director.',
+    email: 'board@univent.ui.edu.ng',
+  },
+  {
+    name: 'Mr. Adewuyi Popoola',
+    title: 'Director (Bursar, University of Ibadan)',
+    photo: '/images/management/Mr-Adewuyi-Popoola.jpg',
+    bio: 'He is another inestimable member of U.I. Ventures Limited. Mr. Popoola is an administrator, Fellow of the Institute of Chartered Accountants of Nigeria, and the Head of the Bursary Department of the University of Ibadan.',
+    email: 'bursar@ui.edu.ng',
+  },
+  {
+    name: 'Mr. Ganiyu Oke Saliu',
+    title: 'Director (Registrar, University of Ibadan)',
+    photo: '/images/management/Mr-Ganiu-Oke.jpg',
+    bio: 'He is an administrator to the core and represents the University of Ibadan on the Board of Directors of U.I. Ventures Limited. He is the Registrar of the University of Ibadan.',
+    email: 'registrar@ui.edu.ng',
   },
 ]
 
-const divisionManagers: Leader[] = [
-  { office: 'Bakery', title: 'Manager, U.I. Bakery / Fast Food', initials: 'BK', color: 'bg-secondary-500', email: 'bakery@univent.ui.edu.ng', location: 'Modern Bakery, Ajibode Road', duties: 'Daily bread & snacks production, hygiene compliance and wholesale distribution.' },
-  { office: 'Hotels', title: 'Manager, U.I. Hotels', initials: 'HT', color: 'bg-primary-700', email: 'hotels@univent.ui.edu.ng', location: 'U.I. Hotels, Campus', duties: 'Rooms, bookings, conference halls, restaurant, pool and gym facilities.' },
-  { office: 'Petrol', title: 'Manager, U.I. Petrol Station', initials: 'PS', color: 'bg-black', email: 'petrol@univent.ui.edu.ng', location: 'U.I. Petrol Station', duties: 'Fuel sales, lubricants, car wash and auto services.' },
-  { office: 'Printing', title: 'Manager, U.I. Printing Press', initials: 'PP', color: 'bg-primary-950', email: 'printing@univent.ui.edu.ng', location: 'Printing Press Complex', duties: 'Offset & digital printing, branding and large-format jobs.' },
-  { office: 'HSE', title: 'Head, Health, Safety & Environment', initials: 'HS', color: 'bg-primary-700', email: 'hse@univent.ui.edu.ng', location: 'HSE Unit Office', duties: 'Fumigation, waste management, safety training and compliance.' },
-  { office: 'Consult', title: 'Head, Consultancy Services', initials: 'CS', color: 'bg-black', email: 'consult@univent.ui.edu.ng', location: 'Consultancy Unit Office', duties: 'Research, business and academic consultancy engagements.' },
-]
-
-function LeaderCard({ leader }: { leader: Leader }) {
+function MemberCard({ member, large }: { member: BoardMember; large?: boolean }) {
   return (
-    <Card><CardContent className="p-5">
-      <div className="flex items-center gap-4">
-        <span className={`h-14 w-14 rounded-2xl ${leader.color} text-white flex items-center justify-center font-extrabold text-lg shrink-0`}>{leader.initials}</span>
-        <div>
-          <Badge variant="outline">{leader.office}</Badge>
-          <div className="font-bold mt-1">{leader.title}</div>
-        </div>
+    <Card className="cursor-default overflow-hidden">
+      <div className={large ? 'grid sm:grid-cols-[220px_1fr]' : ''}>
+        <img src={member.photo} alt={member.name} className={large ? 'h-64 sm:h-full w-full object-cover object-top' : 'h-72 w-full object-cover object-top'} loading="lazy" />
+        <CardContent className="p-5">
+          <Badge variant="secondary">{member.title}</Badge>
+          <h3 className={`font-heading font-extrabold mt-2 ${large ? 'text-2xl' : 'text-lg'}`}>{member.name}</h3>
+          <p className="text-sm text-gray-600 mt-2 leading-relaxed">{member.bio}</p>
+          <div className="flex items-center gap-2 text-sm text-primary-700 mt-3"><Mail className="h-4 w-4" /> {member.email}</div>
+        </CardContent>
       </div>
-      <p className="text-sm text-gray-600 mt-3">{leader.duties}</p>
-      <div className="mt-3 space-y-1.5 text-sm">
-        <div className="flex items-center gap-2 text-primary-700"><Mail className="h-4 w-4" /> {leader.email}</div>
-        <div className="flex items-center gap-2 text-gray-500"><MapPin className="h-4 w-4" /> {leader.location}</div>
-      </div>
-    </CardContent></Card>
+    </Card>
   )
 }
 
@@ -70,28 +74,27 @@ export function Management() {
         <div className="container-custom py-14">
           <Badge className="bg-secondary-400 text-black border-0">Management</Badge>
           <h1 className="font-heading text-3xl lg:text-5xl font-extrabold mt-4 flex items-center gap-3">
-            <Users className="h-10 w-10 text-secondary-400" /> Meet the Management
+            <Users className="h-10 w-10 text-secondary-400" /> Board of Directors
           </h1>
-          <p className="mt-3 text-blue-100 max-w-2xl">The team behind the University of Ibadan Ventures — one leadership, six divisions, one marketplace.</p>
+          <p className="mt-3 text-blue-100 max-w-2xl">The distinguished leaders steering U.I. Ventures Limited — six divisions, one marketplace.</p>
         </div>
       </div>
 
       <div className="container-custom py-12">
-        <h2 className="font-heading text-xl font-bold flex items-center gap-2"><Crown className="h-5 w-5 text-secondary-600" /> Executive Leadership</h2>
-        <div className="mt-4 grid sm:grid-cols-2 gap-5">
-          {executives.map(e => <LeaderCard key={e.title} leader={e} />)}
+        <h2 className="font-heading text-xl font-bold flex items-center gap-2"><Crown className="h-5 w-5 text-secondary-600" /> Chairman of the Board</h2>
+        <div className="mt-4 max-w-3xl">
+          <MemberCard member={chairman} large />
         </div>
 
-        <h2 className="font-heading text-xl font-bold mt-10 flex items-center gap-2"><UserCog className="h-5 w-5 text-primary-700" /> Division Managers</h2>
-        <p className="text-sm text-gray-500 mt-1">Each manager runs a division and manages its own products, bookings and orders on this marketplace.</p>
-        <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {divisionManagers.map(m => <LeaderCard key={m.title} leader={m} />)}
+        <h2 className="font-heading text-xl font-bold mt-10">Directors</h2>
+        <div className="mt-4 grid sm:grid-cols-2 gap-5">
+          {directors.map(d => <MemberCard key={d.name} member={d} />)}
         </div>
 
         <Card className="mt-10 cursor-default bg-primary-950 text-white"><CardContent className="p-6 flex flex-wrap gap-4 items-center justify-between">
           <div>
-            <div className="font-bold text-lg">Want to partner or distribute?</div>
-            <div className="text-sm text-blue-100">Wholesale bread (2,000–2,500 loaves), event bookings and print contracts welcome.</div>
+            <div className="font-bold text-lg flex items-center gap-2"><MapPin className="h-5 w-5 text-secondary-400" /> Ventures House, Oduduwa Road, University of Ibadan</div>
+            <div className="text-sm text-blue-100">For partnerships, wholesale and corporate enquiries, reach the board secretariat.</div>
           </div>
           <Link to="/contact"><Button variant="secondary">Contact Us <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
         </CardContent></Card>

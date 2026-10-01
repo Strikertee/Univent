@@ -47,10 +47,10 @@ export function Home() {
           </motion.div>
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7 }} className="relative hidden lg:block">
             <div className="grid grid-cols-2 gap-4">
-              <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80" alt="UI Hotels" className="rounded-2xl h-64 w-full object-cover shadow-2xl rotate-[-2deg]" />
-              <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&q=80" alt="UI Bakery" className="rounded-2xl h-64 w-full object-cover shadow-2xl mt-8 rotate-[2deg]" />
-              <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80" alt="Restaurant" className="rounded-2xl h-48 w-full object-cover shadow-2xl rotate-[1deg]" />
-              <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80" alt="Gym" className="rounded-2xl h-48 w-full object-cover shadow-2xl mt-[-1rem] rotate-[-1deg]" />
+              <img src="/images/rooms/room-1.jpg" alt="UI Hotels" className="rounded-2xl h-64 w-full object-cover shadow-2xl rotate-[-2deg]" />
+              <img src="/images/bakery/ui-bakery.jpg" alt="UI Bakery" className="rounded-2xl h-64 w-full object-cover shadow-2xl mt-8 rotate-[2deg]" />
+              <img src="/images/rooms/room-2.jpg" alt="Dining" className="rounded-2xl h-48 w-full object-cover shadow-2xl rotate-[1deg]" />
+              <img src="/images/rooms/ui-hotels-2.webp" alt="Fitness" className="rounded-2xl h-48 w-full object-cover shadow-2xl mt-[-1rem] rotate-[-1deg]" />
             </div>
             <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="absolute -bottom-6 left-8 bg-white text-gray-900 rounded-2xl shadow-2xl px-5 py-4 flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center"><BedDouble className="h-5 w-5 text-blue-700" /></div>
