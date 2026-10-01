@@ -1,7 +1,5 @@
-import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { Facebook, Twitter, Instagram, Linkedin, Youtube, Mail, MapPin, Phone, ArrowUpRight } from 'lucide-react'
-import { cn } from '../../lib/utils'
 
 const footerLinks = {
   company: [

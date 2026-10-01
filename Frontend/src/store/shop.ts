@@ -144,9 +144,10 @@ function normalizeBooking(b: SavedBooking): SavedBooking {
   else if (legacy['status'] === 'Cancelled') status = 'cancelled'
   else if (status !== 'pending' && status !== 'approved' && status !== 'cancelled') status = 'pending'
   let paymentStatus = b.paymentStatus
-  if (paymentStatus === 'verified') paymentStatus = 'confirmed'
-  else if (paymentStatus === 'pending_verification') paymentStatus = 'awaiting_confirmation'
-  else if (paymentStatus === 'failed') paymentStatus = 'rejected'
+  const legacyPay = paymentStatus as unknown as string
+  if (legacyPay === 'verified') paymentStatus = 'confirmed'
+  else if (legacyPay === 'pending_verification') paymentStatus = 'awaiting_confirmation'
+  else if (legacyPay === 'failed') paymentStatus = 'rejected'
   else if (!paymentStatus) paymentStatus = 'confirmed'
   return {
     ...b,

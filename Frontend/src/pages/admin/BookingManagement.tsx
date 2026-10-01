@@ -24,27 +24,27 @@ export function BookingManagement() {
   const [receiptView, setReceiptView] = useState<string | null>(null)
   const receiptBooking = bookings.find(b => b.id === receiptView)
 
-  const confirm = (id: string, ref: string) => {
+  const approvePayment = (id: string, ref: string) => {
     updateBooking(id, { status: 'approved', paymentStatus: 'confirmed', verifiedAt: new Date().toISOString() })
     toast.success(`Payment confirmed — ${ref} approved`)
   }
 
   const reject = (id: string, ref: string, roomSlug: string, roomNumber: string | null) => {
-    if (!confirm(`Reject ${ref}'s receipt? The room will be released.`)) return
+    if (!window.confirm(`Reject ${ref}'s receipt? The room will be released.`)) return
     if (roomNumber) releaseRoomNumber(ROOM_IDS[roomSlug] || '', roomNumber)
     updateBooking(id, { status: 'cancelled', paymentStatus: 'rejected' })
     toast.success(`${ref} rejected — room released`)
   }
 
   const markReversed = (id: string, ref: string, roomSlug: string, roomNumber: string | null) => {
-    if (!confirm(`Mark ${ref} as REVERSED? The room will be released and approval removed.`)) return
+    if (!window.confirm(`Mark ${ref} as REVERSED? The room will be released and approval removed.`)) return
     if (roomNumber) releaseRoomNumber(ROOM_IDS[roomSlug] || '', roomNumber)
     updateBooking(id, { status: 'cancelled', paymentStatus: 'reversed' })
     toast.success(`${ref} marked reversed — room released`)
   }
 
   const cancel = (id: string, ref: string, roomSlug: string, roomNumber: string | null) => {
-    if (!confirm(`Cancel booking ${ref}? The room number will be freed.`)) return
+    if (!window.confirm(`Cancel booking ${ref}? The room number will be freed.`)) return
     if (roomNumber) releaseRoomNumber(ROOM_IDS[roomSlug] || '', roomNumber)
     updateBooking(id, { status: 'cancelled' })
     toast.success(`${ref} cancelled`)
@@ -87,7 +87,7 @@ export function BookingManagement() {
                     <Button size="sm" variant="outline" onClick={() => setReceiptView(b.id)}><Receipt className="h-3.5 w-3.5 mr-1" /> View receipt</Button>
                   )}
                   {b.status === 'pending' && (
-                    <Button size="sm" onClick={() => confirm(b.id, b.ref)}><BadgeCheck className="h-3.5 w-3.5 mr-1" /> Confirm payment</Button>
+                    <Button size="sm" onClick={() => approvePayment(b.id, b.ref)}><BadgeCheck className="h-3.5 w-3.5 mr-1" /> Confirm payment</Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => reject(b.id, b.ref, b.roomSlug, b.roomNumber)}>Reject receipt</Button>
                   <Button size="sm" variant="outline" onClick={() => markReversed(b.id, b.ref, b.roomSlug, b.roomNumber)}>
@@ -109,7 +109,7 @@ export function BookingManagement() {
           {receiptBooking?.receipt && <img src={receiptBooking.receipt} alt="Transfer receipt" className="w-full max-h-[60vh] object-contain bg-gray-50 rounded-xl" />}
           {receiptBooking && receiptBooking.status === 'pending' && (
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => { confirm(receiptBooking.id, receiptBooking.ref); setReceiptView(null) }}><BadgeCheck className="h-4 w-4 mr-1" /> Confirm payment</Button>
+              <Button className="flex-1" onClick={() => { approvePayment(receiptBooking.id, receiptBooking.ref); setReceiptView(null) }}><BadgeCheck className="h-4 w-4 mr-1" /> Confirm payment</Button>
               <Button variant="outline" className="flex-1" onClick={() => { reject(receiptBooking.id, receiptBooking.ref, receiptBooking.roomSlug, receiptBooking.roomNumber); setReceiptView(null) }}>Reject</Button>
             </div>
           )}

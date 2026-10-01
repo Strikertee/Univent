@@ -7,10 +7,14 @@ const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
 const SelectValue = SelectPrimitive.Value
 
+type SelectTriggerProps = React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
+  placeholder?: string
+}
+
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+  SelectTriggerProps
+>(({ className, children, placeholder, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
@@ -23,7 +27,7 @@ const SelectTrigger = React.forwardRef<
     )}
     {...props}
   >
-    <SelectPrimitive.Value placeholder={props.placeholder}>
+    <SelectPrimitive.Value placeholder={placeholder}>
       {children}
     </SelectPrimitive.Value>
     <SelectPrimitive.Icon>
@@ -77,7 +81,7 @@ const SelectContent = React.forwardRef<
       {...props}
     >
       <SelectScrollUpButton />
-      <SelectPrimitive.Viewport className={cn('p-1', props?.className)}>
+      <SelectPrimitive.Viewport className="p-1">
         {children}
       </SelectPrimitive.Viewport>
       <SelectScrollDownButton />

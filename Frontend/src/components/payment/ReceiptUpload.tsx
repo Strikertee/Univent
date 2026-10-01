@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { UploadCloud, X, Receipt } from 'lucide-react'
-import { Button } from '../ui/Button'
 
 /** Downscales images to max 1024px JPEG so receipts stay small in storage. */
 function fileToDataUrl(file: File): Promise<string> {

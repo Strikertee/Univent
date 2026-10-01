@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Menu, X, ShoppingCart, User, LogOut, LayoutDashboard, Store, Heart, Bell } from 'lucide-react'
+import { Menu, X, ShoppingCart, LogOut, LayoutDashboard, Store, Heart, Bell } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '../ui/Button'
@@ -21,7 +21,7 @@ const divisions = [
 
 export function Header() {
   const { user, isAuthenticated, logout, isLoading } = useAuth()
-  const { cart, toggleCart, isOpen: isCartOpen, closeCart } = useCart()
+  const { cart, toggleCart, closeCart } = useCart()
   const location = useLocation()
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)

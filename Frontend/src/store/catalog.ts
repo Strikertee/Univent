@@ -101,7 +101,7 @@ function readRoomNumbers(): Record<string, string[]> {
 }
 
 /** Assigns the lowest free room number of that type, e.g. "DD-04". */
-export function assignRoomNumber(roomId: string, totalRooms: number): string {
+export function assignRoomNumber(roomId: string): string {
   const prefix = ROOM_PREFIX[roomId] || 'RM'
   const taken = new Set(readRoomNumbers()[roomId] || [])
   let n = 1

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Landmark, CheckCircle2, Copy, Check } from 'lucide-react'
+import { Landmark, CheckCircle2, Check } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'

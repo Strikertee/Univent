@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { Cart, CartItem, Product, Room, Facility, DELIVERY_FEE } from '../types'
-import { formatCurrency } from '../lib/utils'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { Cart, CartItem, DELIVERY_FEE } from '../types'
 
 export type Fulfillment = 'pickup' | 'delivery'
 

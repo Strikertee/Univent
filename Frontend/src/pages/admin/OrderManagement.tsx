@@ -18,13 +18,13 @@ export function OrderManagement() {
   // Division admins only see orders containing their division's items
   const visible = isSuper ? orders : orders.filter(o => o.divisionId === user?.divisionId || o.divisionId === 'multiple')
 
-  const confirm = (id: string, ref: string) => {
+  const approvePayment = (id: string, ref: string) => {
     updateOrder(id, { paymentStatus: 'confirmed', status: 'Delivered' })
     toast.success(`Payment confirmed — ${ref} approved`)
   }
 
   const reject = (id: string, ref: string) => {
-    if (!confirm(`Reject ${ref}'s receipt?`)) return
+    if (!window.confirm(`Reject ${ref}'s receipt?`)) return
     updateOrder(id, { paymentStatus: 'rejected', status: 'Cancelled' })
     toast.success(`${ref} rejected`)
   }
@@ -65,7 +65,7 @@ export function OrderManagement() {
               {o.paymentStatus === 'awaiting_confirmation' && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {o.receipt && <Button size="sm" variant="outline" onClick={() => setReceiptView(o.id)}><Receipt className="h-3.5 w-3.5 mr-1" /> View receipt</Button>}
-                  <Button size="sm" onClick={() => confirm(o.id, o.ref)}><BadgeCheck className="h-3.5 w-3.5 mr-1" /> Confirm payment</Button>
+                  <Button size="sm" onClick={() => approvePayment(o.id, o.ref)}><BadgeCheck className="h-3.5 w-3.5 mr-1" /> Confirm payment</Button>
                   <Button size="sm" variant="outline" onClick={() => reject(o.id, o.ref)}>Reject</Button>
                 </div>
               )}
@@ -80,7 +80,7 @@ export function OrderManagement() {
           {receiptOrder?.receipt && <img src={receiptOrder.receipt} alt="Transfer receipt" className="w-full max-h-[60vh] object-contain bg-gray-50 rounded-xl" />}
           {receiptOrder && receiptOrder.paymentStatus === 'awaiting_confirmation' && (
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => { confirm(receiptOrder.id, receiptOrder.ref); setReceiptView(null) }}><BadgeCheck className="h-4 w-4 mr-1" /> Confirm payment</Button>
+              <Button className="flex-1" onClick={() => { approvePayment(receiptOrder.id, receiptOrder.ref); setReceiptView(null) }}><BadgeCheck className="h-4 w-4 mr-1" /> Confirm payment</Button>
               <Button variant="outline" className="flex-1" onClick={() => { reject(receiptOrder.id, receiptOrder.ref); setReceiptView(null) }}>Reject</Button>
             </div>
           )}

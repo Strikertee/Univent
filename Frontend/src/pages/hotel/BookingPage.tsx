@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState } from 'react'
-import { BedDouble, CheckCircle2, Landmark, ArrowLeft, Wifi, Copy, Check } from 'lucide-react'
+import { BedDouble, CheckCircle2, Landmark, ArrowLeft, Wifi, Check } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
@@ -61,7 +61,7 @@ export function BookingPage() {
     await new Promise(r => setTimeout(r, 1200))
     try {
       const ref = makeRef('BK')
-      const roomNumber = assignRoomNumber(room.id, room.totalRooms)
+      const roomNumber = assignRoomNumber(room.id)
       saveBooking({
         ref,
         userId: user?.id || 'guest',
