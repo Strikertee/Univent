@@ -135,19 +135,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return userData
       }
       throw new Error(response.message || 'Login failed')
-    } catch (apiError) {
-      // 2. Offline demo fallback — accept ANY credentials so users are never blocked.
-      // Known demo passwords are accepted; anything else also logs in as customer in dev.
+    } catch (apiError: any) {
+      // If the backend ANSWERED (error.response exists), it actively rejected
+      // the credentials — wrong password or unknown email. That is a real
+      // failure: never fall back to demo mode here, or anyone logs in as anyone.
+      if (apiError?.response) {
+        const serverMsg =
+          apiError.response.data?.detail ||
+          apiError.response.data?.message ||
+          'Invalid email or password'
+        throw new Error(serverMsg)
+      }
+      // No response at all = backend unreachable (offline, asleep, wrong URL).
+      // Only then do we allow the offline demo session.
+      console.warn('Backend unreachable, using offline demo session')
       const email = credentials.email.trim()
       if (!email || !credentials.password) throw new Error('Enter email and password')
-
-      const demoPasswords = ['password', 'admin123', 'univent123']
       const isKnownAdmin = email.toLowerCase() === 'admin@univent.ui.edu.ng'
-
-      if (!demoPasswords.includes(credentials.password) && !isKnownAdmin) {
-        // Still allow login offline as customer — backend not required for demo
-        console.warn('API login failed, using offline demo session:', apiError)
-      }
       const namePart = email.split('@')[0].replace(/[._-]+/g, ' ').trim() || 'Demo User'
       const [firstName, ...rest] = namePart.split(' ')
       const u = demoUser(email, firstName.charAt(0).toUpperCase() + firstName.slice(1), (rest.join(' ') || 'User').replace(/\b\w/g, c => c.toUpperCase()))
@@ -175,8 +179,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return userData
       }
       throw new Error(response.message || 'Registration failed')
-    } catch {
-      // Offline demo registration
+    } catch (err: any) {
+      // Backend answered (e.g. email taken) → real failure, surface it.
+      if (err?.response) {
+        const serverMsg =
+          err.response.data?.detail || err.response.data?.message || 'Registration failed'
+        throw new Error(serverMsg)
+      }
+      // Backend unreachable → offline demo registration only.
       const u = demoUser(data.email, data.firstName, data.lastName)
       u.phone = data.phone
       persist(u, `demo-token-${Date.now()}`)
