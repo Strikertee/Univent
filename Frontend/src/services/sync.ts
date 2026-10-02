@@ -4,10 +4,11 @@
    behaves exactly as before — nothing breaks. */
 
 import { api, hasRealToken } from './api'
-import { BOOKINGS_KEY, ORDERS_KEY, emitShopChange } from '../store/shop'
+import { BOOKINGS_KEY, ORDERS_KEY, SavedBooking, SavedOrder, emitShopChange } from '../store/shop'
 import { PRODUCTS_KEY, ROOMS_KEY, emitCatalogChange } from '../store/catalog'
-import { SALES_KEY, emitSalesChange } from '../store/sales'
+import { SALES_KEY, DailySale, emitSalesChange } from '../store/sales'
 import { CART_UPDATED_KEY, replaceCartState } from '../context/CartContext'
+import { DIVISIONS_KEY, emitDivisionChange } from '../store/divisions'
 import { Cart, CartItem } from '../types'
 
 let online: boolean | null = null
@@ -61,21 +62,38 @@ export async function pullMine(): Promise<void> {
     client.get('/sales', { timeout: 12000 }),
   ])
   if (orders.status === 'fulfilled' && Array.isArray(orders.value.data?.data)) {
-    safeWrite(ORDERS_KEY, orders.value.data.data)
+    safeWrite(ORDERS_KEY, mergeById(orders.value.data.data, readKey<SavedOrder>(ORDERS_KEY)))
     emitShopChange()
   }
   if (bookings.status === 'fulfilled' && Array.isArray(bookings.value.data?.data)) {
-    safeWrite(BOOKINGS_KEY, bookings.value.data.data)
+    safeWrite(BOOKINGS_KEY, mergeById(bookings.value.data.data, readKey<SavedBooking>(BOOKINGS_KEY)))
     emitShopChange()
   }
   if (sales.status === 'fulfilled' && Array.isArray(sales.value.data?.data)) {
-    safeWrite(SALES_KEY, sales.value.data.data)
+    safeWrite(SALES_KEY, mergeById(sales.value.data.data, readKey<DailySale>(SALES_KEY)))
     emitSalesChange()
   }
 }
 
-function cartKey(item: CartItem): string {
-  return `${item.type}:${item.productId || item.roomId || item.facilityId || item.id}`
+/** Merge server records with local-only ones (same id → server copy wins).
+ *  Pulls must NEVER delete local records the server hasn't seen yet —
+ *  otherwise a pending order vanishes the moment you log back in. */
+function mergeById<T extends { id: string }>(server: T[], local: T[]): T[] {
+  const ids = new Set(server.map(r => r.id))
+  return [...server, ...local.filter(r => !ids.has(r.id))]
+}
+
+function readKey<T>(key: string): T[] {
+  try {
+    const raw = localStorage.getItem(key)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function cartKey(item: CartItem): string {  return `${item.type}:${item.productId || item.roomId || item.facilityId || item.id}`
 }
 
 function readLocalCart(): { items: CartItem[]; fulfillment: 'pickup' | 'delivery'; updatedAt: string } {
@@ -153,4 +171,29 @@ export async function pullAll(): Promise<void> {
   await pullCatalogue()
   await pullMine()
   await pullCart()
+  await pullDivisions()
+}
+
+/** Pull divisions (public) and merge with locally created ones. */
+export async function pullDivisions(): Promise<void> {
+  if (online !== true) return
+  try {
+    const res = await api.getClient().get('/divisions', { timeout: 12000 })
+    const server = res.data?.data
+    if (!Array.isArray(server)) return
+    const now = new Date().toISOString()
+    const withDates = (server as Array<Record<string, unknown>>).map(d => ({
+      ...d, createdAt: now, updatedAt: now,
+    })) as unknown as Array<{ id: string }>
+    let local: Array<{ id: string }> = []
+    try {
+      local = JSON.parse(localStorage.getItem(DIVISIONS_KEY) || '[]')
+    } catch { /* ignore */ }
+    const serverIds = new Set(withDates.map((d: { id: string }) => d.id))
+    const onlyLocal = local.filter(d => !serverIds.has(d.id))
+    safeWrite(DIVISIONS_KEY, [...withDates, ...onlyLocal])
+    emitDivisionChange()
+  } catch (error) {
+    console.warn('Divisions pull failed, using local data:', error)
+  }
 }

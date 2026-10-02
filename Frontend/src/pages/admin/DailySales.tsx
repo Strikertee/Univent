@@ -6,12 +6,13 @@ import { Input } from '../../components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/Select'
 import { useAuth } from '../../context/AuthContext'
 import { addDailySale, deleteDailySale, useDailySales, salesTotal, todayISO } from '../../store/sales'
-import { divisions } from '../../data/mockData'
+import { useDivisions } from '../../store/divisions'
 import { formatCurrency } from '../../lib/utils'
 import toast from 'react-hot-toast'
 
 export function DailySales() {
   const { user } = useAuth()
+  const divisions = useDivisions()
   const isSuper = user?.role === 'super_admin'
   const [filterDiv, setFilterDiv] = useState<string>(isSuper ? 'all' : (user?.divisionId || 'all'))
   const [form, setForm] = useState({ date: todayISO(), item: '', amount: '' })

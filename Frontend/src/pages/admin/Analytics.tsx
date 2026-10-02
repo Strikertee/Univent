@@ -3,7 +3,7 @@ import { Card, CardContent } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { useShopData } from '../../store/shop'
 import { useDailySales, salesTotal } from '../../store/sales'
-import { divisions } from '../../data/mockData'
+import { useDivisions } from '../../store/divisions'
 import { formatCurrency } from '../../lib/utils'
 
 const BAR_COLORS = ['bg-primary-700', 'bg-secondary-400', 'bg-primary-950', 'bg-black', 'bg-primary-500', 'bg-secondary-600']
@@ -12,6 +12,7 @@ const BAR_COLORS = ['bg-primary-700', 'bg-secondary-400', 'bg-primary-950', 'bg-
 export function SuperAnalytics() {
   const { orders, bookings } = useShopData()
   const sales = useDailySales()
+  const divisions = useDivisions()
 
   const verifiedBookings = bookings.filter(b => b.status === 'approved' && b.paymentStatus === 'confirmed')
   const bookingsRevenue = verifiedBookings.reduce((s, b) => s + b.total, 0)

@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/Badge'
 import { useAuth } from '../../context/AuthContext'
 import { useShopData } from '../../store/shop'
 import { useDailySales, salesTotal } from '../../store/sales'
-import { divisions } from '../../data/mockData'
+import { useDivisions } from '../../store/divisions'
 import { formatCurrency } from '../../lib/utils'
 import { SuperAnalytics } from './Analytics'
 
@@ -24,6 +24,7 @@ const allLinks = [
 export function AdminDashboard() {
   const { user } = useAuth()
   const { orders, bookings } = useShopData()
+  const divisions = useDivisions()
   const sales = useDailySales()
   const isSuper = user?.role === 'super_admin'
   const myDivision = divisions.find(d => d.id === user?.divisionId)

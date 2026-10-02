@@ -31,7 +31,7 @@ export function Orders() {
             <div className="flex justify-between items-start gap-3">
               <div>
                 <b>{o.ref}</b>
-                <div className="text-sm text-gray-500">{o.items.map(i => `${i.name} × ${i.quantity}`).join(', ')}</div>
+                <div className="text-sm text-gray-500 break-words">{o.items.map(i => `${i.name} × ${i.quantity}`).join(', ')}</div>
                 <div className="text-xs text-gray-400 mt-1">{o.date} • Transfer • {o.fulfillment === 'delivery' ? 'Delivery' : 'Pickup'} • {o.address}, {o.city}</div>
                 <div className="font-bold mt-1 text-primary-700">{formatCurrency(o.total)}</div>
                 {o.paymentStatus === 'awaiting_confirmation' && (

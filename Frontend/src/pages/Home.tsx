@@ -4,7 +4,8 @@ import { ArrowRight, Star, Truck, ShieldCheck, CreditCard, MapPin, BedDouble, Cr
 import { Button } from '../components/ui/Button'
 import { Card, CardContent } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
-import { divisions, hotelFacilities } from '../data/mockData'
+import { hotelFacilities } from '../data/mockData'
+import { useDivisions } from '../store/divisions'
 import { useCatalog } from '../store/catalog'
 import { useIsAdmin } from '../components/auth/RequireDivision'
 import { TestimonialsSection } from './info/InfoPages'
@@ -20,6 +21,7 @@ export function Home() {
   const { addItem } = useCart()
   const isAdmin = useIsAdmin()
   const { rooms: hotelRooms, products: bakeryProducts } = useCatalog()
+  const divisions = useDivisions()
 
   return (
     <div className="min-h-screen">

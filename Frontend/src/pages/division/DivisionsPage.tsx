@@ -3,9 +3,10 @@ import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
-import { divisions } from '../../data/mockData'
+import { useDivisions } from '../../store/divisions'
 
 export function DivisionsPage() {
+  const divisions = useDivisions()
   return (
     <div className="container-custom py-12">
       <h1 className="font-heading text-3xl lg:text-4xl font-bold">All Divisions</h1>

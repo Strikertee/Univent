@@ -93,7 +93,7 @@ export function CartDrawer() {
                               {new Date(item.checkIn).toLocaleDateString()} - {new Date(item.checkOut).toLocaleDateString()}
                             </p>
                           )}
-                          <div className="flex items-center gap-2 mt-2">
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                             <Button
                               variant="outline"
                               size="icon"

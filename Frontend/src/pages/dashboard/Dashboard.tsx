@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge'
 import { useAuth } from '../../context/AuthContext'
 import { useCart } from '../../context/CartContext'
 import { useShopData } from '../../store/shop'
-import { divisions } from '../../data/mockData'
+import { useDivisions } from '../../store/divisions'
 import { useCatalog } from '../../store/catalog'
 import { FulfillmentPicker } from '../../components/cart/FulfillmentPicker'
 import { formatCurrency } from '../../lib/utils'
@@ -34,6 +34,7 @@ export function Dashboard() {
   const { user } = useAuth()
   const { cart, addItem, updateQuantity, removeItem } = useCart()
   const { products: bakeryProducts } = useCatalog()
+  const divisions = useDivisions()
   const { orders, bookings } = useShopData(user?.id)
   const isAdmin = user?.role === 'super_admin' || user?.role === 'division_admin'
   if (isAdmin) return <Navigate to="/admin" replace />
@@ -111,17 +112,17 @@ export function Dashboard() {
                   <img src={p.images[0]} alt={p.name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm truncate">{p.name}</div>
-                    <div className="text-xs text-primary-700 font-bold">{formatCurrency(p.price)} • {p.stock > 0 ? <span className="text-gray-500 font-normal">{p.stock} available</span> : <span className="text-secondary-600 font-semibold">In the making</span>}</div>
+                    <div className="text-xs text-primary-700 font-bold truncate">{formatCurrency(p.price)} • {p.stock > 0 ? <span className="text-gray-500 font-normal">{p.stock} available</span> : <span className="text-secondary-600 font-semibold">In the making</span>}</div>
                   </div>
                   {p.stock <= 0 ? (
-                    <Badge className="bg-primary-950 text-secondary-300 border-0 text-[10px]">In the making</Badge>
+                    <Badge className="bg-primary-950 text-secondary-300 border-0 text-[10px] shrink-0">In the making</Badge>
                   ) : q === 0 ? (
-                    <Button size="sm" onClick={() => { inc(p.id, p.name, p.price, p.images[0], p.stock); toast.success(`${p.name} added`) }}><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
+                    <Button size="sm" className="shrink-0" onClick={() => { inc(p.id, p.name, p.price, p.images[0], p.stock); toast.success(`${p.name} added`) }}><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => dec(p.id)}><Minus className="h-3.5 w-3.5" /></Button>
-                      <b className="w-5 text-center">{q}</b>
-                      <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => inc(p.id, p.name, p.price, p.images[0], p.stock)}><Plus className="h-3.5 w-3.5" /></Button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" onClick={() => dec(p.id)}><Minus className="h-3.5 w-3.5" /></Button>
+                      <b className="w-5 text-center shrink-0">{q}</b>
+                      <Button size="icon" variant="outline" className="h-8 w-8 shrink-0" onClick={() => inc(p.id, p.name, p.price, p.images[0], p.stock)}><Plus className="h-3.5 w-3.5" /></Button>
                     </div>
                   )}
                 </div>
@@ -144,10 +145,10 @@ export function Dashboard() {
                       <div className="font-semibold truncate">{item.name}</div>
                       <div className="text-xs text-gray-500">{formatCurrency(item.price)} each</div>
                     </div>
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-3 w-3" /></Button>
-                    <b className="w-4 text-center text-sm">{item.quantity}</b>
-                    <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => removeItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="outline" className="h-7 w-7 shrink-0" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus className="h-3 w-3" /></Button>
+                    <b className="w-4 text-center text-sm shrink-0">{item.quantity}</b>
+                    <Button size="icon" variant="outline" className="h-7 w-7 shrink-0" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-red-500" onClick={() => removeItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 ))}
               </div>

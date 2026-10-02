@@ -2,7 +2,8 @@ import { useParams, Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
-import { divisions, hotelFacilities, bakeryHistory } from '../../data/mockData'
+import { hotelFacilities, bakeryHistory } from '../../data/mockData'
+import { useDivisions } from '../../store/divisions'
 import { useCatalog } from '../../store/catalog'
 import { formatCurrency } from '../../lib/utils'
 import { ArrowRight } from 'lucide-react'
@@ -10,6 +11,7 @@ import { ArrowRight } from 'lucide-react'
 export function DivisionDetail() {
   const { slug } = useParams()
   const { rooms: hotelRooms, products: bakeryProducts } = useCatalog()
+  const divisions = useDivisions()
   const division = divisions.find(d => d.slug === slug)
 
   if (!division) return <div className="container-custom py-20 text-center"><h1 className="text-2xl font-bold">Division not found</h1><Link to="/divisions" className="mt-4 inline-block"><Button>All divisions</Button></Link></div>
@@ -61,8 +63,8 @@ export function DivisionDetail() {
             {(isHotel ? hotelRooms.slice(0, 3) : bakeryProducts.slice(0, 3)).map((item: any) => (
               <Card key={item.id} className="overflow-hidden">
                 <div className="flex gap-3 p-3">
-                  <img src={item.images[0]} alt={item.name} className="h-20 w-20 rounded-xl object-cover" />
-                  <div className="flex-1"><div className="font-semibold text-sm">{item.name}</div><div className="text-xs text-gray-500">{item.shortDescription}</div><div className="font-bold text-primary-700 mt-1">{formatCurrency(item.price)}</div></div>
+                  <img src={item.images[0]} alt={item.name} className="h-20 w-20 rounded-xl object-cover shrink-0" />
+                  <div className="flex-1 min-w-0"><div className="font-semibold text-sm break-words">{item.name}</div><div className="text-xs text-gray-500 break-words">{item.shortDescription}</div><div className="font-bold text-primary-700 mt-1">{formatCurrency(item.price)}</div></div>
                 </div>
               </Card>
             ))}

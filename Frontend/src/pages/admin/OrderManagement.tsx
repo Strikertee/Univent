@@ -43,7 +43,7 @@ export function OrderManagement() {
                 <div>
                   <b>{o.ref}</b>
                   <div className="text-xs text-gray-500">{o.firstName} {o.lastName} • {o.email} • {o.phone}</div>
-                  <div className="text-sm text-gray-600">{o.items.map(i => `${i.name} × ${i.quantity}`).join(', ')}</div>
+                  <div className="text-sm text-gray-600 break-words">{o.items.map(i => `${i.name} × ${i.quantity}`).join(', ')}</div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Badge variant="outline" className="mr-1">{o.fulfillment === 'delivery' ? 'Delivery' : 'Pickup'}</Badge>
                     {o.address}, {o.city}
