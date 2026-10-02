@@ -1,9 +1,8 @@
 # Univent Backend — Learner's Guide (What Was Built & How)
 
-> Honest status first: the backend is **API-complete on paper** (models, controllers,
-> routes, middleware, database schema) but **not yet runnable or connected** — it still
-> needs a Laravel app shell, and the frontend still reads local data. This guide explains
-> every piece, how they fit, and exactly what remains. For setup steps, see `Backend/README.md`.
+> Status: **built, tested (7/7 pytest), and running.** Python + FastAPI + SQLAlchemy.
+> Run it: `cd Backend && .\.venv\Scripts\python -m uvicorn app.main:app --port 8000`
+> Docs: http://127.0.0.1:8000/docs (interactive Swagger UI — try every endpoint there).
 
 ---
 
@@ -12,113 +11,100 @@
 ```
 Backend/
   app/
-    Models/            # PHP classes = database tables (Eloquent ORM)
-      User.php         # people: customers, admins, staff
-      Division.php     # the 6 ventures
-      Category.php     # e.g. "Bread", "Snacks", "Standard rooms"
-      Product.php      # bakery items
-      Room.php         # hotel rooms (+ live availability math)
-      Facility.php     # pool, gym, conference hall...
-      Booking.php      # hotel reservations (+ holdsRoom rule)
-      Order.php        # shop payments
-      OrderItem.php    # lines inside an order
-      DailySale.php    # daily sales log per division
-    Http/
-      Controllers/Api/ # functions behind each URL (the "waiters")
-      Middleware/
-        CheckRole.php  # the "bouncer": only lets listed roles through
-  routes/
-    api.php            # the menu: which URL → which controller function
-  database/
-    schema.sql         # the full MySQL blueprint: tables + seed data
-  composer.json        # PHP dependencies (Laravel, Sanctum)
-  .env.example         # config template (DB name, payment keys)
+    main.py            # app factory: CORS, /api/health, mounts all routers under /api
+    db.py              # engine (SQLite local / Postgres on Render), sessions, init_db()
+    models.py          # 10 tables as Python classes + to_dict() with camelCase keys
+    seed_data.py       # the catalogue content (same ids/prices as the frontend)
+    seed.py            # `python -m app.seed` — fills a fresh database
+    core/
+      config.py        # settings from env: DATABASE_URL, SECRET_KEY, FRONTEND_URL
+      security.py      # bcrypt hashing + JWT tokens (like the old Sanctum idea)
+      deps.py          # get_db, get_current_user, require_roles, ensure_division
+    routers/           # one file per area — each function = one endpoint
+      auth.py          # register / login / profile
+      catalog.py       # divisions, categories, products, rooms, facilities
+      bookings.py      # create/list/approve/cancel + room-number assignment
+      orders.py        # create (server-side totals, stock decrement)/list/confirm
+      admin.py         # users, daily sales, receipt upload, dashboard stats, settings
+  tests/test_api.py    # 7 end-to-end tests (`pytest`) — see §5
+  requirements.txt     # pinned Python packages
+  render.yaml          # Render web service + Postgres database, one file
+  .env.example         # config template
 ```
 
-**Mental model:** Request → `routes/api.php` → (middleware: logged in? right role?) →
-controller function → Eloquent model → MySQL → JSON back to the React frontend.
+**Mental model:** Request → `main.py` router → (deps: logged in? right role? right division?) →
+SQLAlchemy model → SQLite/Postgres → `{success, data, message}` JSON back to React.
 
 ---
 
 ## 2. What each piece does (and why)
 
-### 2.1 Models — `app/Models/`
-A model is a PHP class mapped to one table. `HasUuids` means new rows get IDs like
-`a3f9-…` automatically. `$fillable` is a security list: only these fields may be
-mass-assigned from request data (prevents attackers injecting e.g. `role=super_admin`).
-`$casts` converts JSON columns to PHP arrays automatically.
+### 2.1 Models — `app/models.py`
+One class per table. IDs are UUID **strings**, and the seed reuses the frontend's ids
+(`div-hotels`, `prod-sardine`, `room-double-deluxe`…) so a future frontend↔API swap is trivial.
+`to_dict()` converts `snake_case` columns to the **camelCase** keys the React app expects
+(`firstName`, `divisionId`, `roomNumber`…).
 
-Special methods that mirror frontend rules (so both sides agree):
-- `Room::availableNow()` — `total_rooms − active bookings`. Same math as the
-  frontend's `getAvailableRooms()`.
-- `Booking::holdsRoom()` — true only when payment is `awaiting_confirmation` or
-  `confirmed` and status isn't `cancelled`. Reversed/failed payments free the room.
-- `User::managesDivision($id)` — true for super admins, or division admins whose
-  `division_id` matches. Controllers call this before every write.
+Rules mirrored from the frontend so both sides agree:
+- `Room.held_count()` / availability — a booking holds a room only while
+  `payment_status` is `awaiting_confirmation`/`confirmed` and status isn't `cancelled`.
+- `Booking.roomNumber` — assigned server-side (`DD-04`, `RS-01`…) as lowest free number.
+- Orders recompute totals from **DB prices** and decrement stock (never trust browser totals).
 
-### 2.2 Middleware — `CheckRole.php`
-A bouncer on routes: `->middleware('role:super_admin,division_admin')` rejects anyone
-else with HTTP 403. It checks the *role*, then controllers check the *division*.
-Two layers: role says "are you staff?", division check says "is it YOUR division?".
+### 2.2 Auth — `core/security.py` + `routers/auth.py`
+Register hashes passwords with **bcrypt** (never stored plain). Login verifies the hash
+and returns a **JWT** (`{"user":…, "token":…}` — exactly what `services/api.ts` parses).
+The frontend sends it back as `Authorization: Bearer <token>`; `get_current_user`
+decodes it on every protected route. 401 = not logged in, 403 = wrong role/division.
 
-### 2.3 Controllers — `app/Http/Controllers/Api/`
-Each public function = one endpoint's job:
-- `AuthController` — register (hashes password with bcrypt, never stored plain),
-  login (checks hash, issues Sanctum token), logout, profile.
-- `DivisionController` — list/show for everyone; only super admin can create;
-  division admins may edit **only their own** division (403 otherwise).
-- `ProductController` / `RoomController` / `FacilityController` / `CategoryController`
-  — same scoping pattern: bakery admin writes bakery rows, hotel admin writes hotel rows.
-- `BookingController::store` — validates dates (`check_out` after `check_in`),
-  computes nights × price, creates the booking as `pending`.
-- `OrderController::store` — computes subtotal/tax/shipping server-side
-  (never trust totals sent by the browser), saves items, tags `division_id`.
-- `UserController` — only super admin may *create* division admins; division admins
-  can only see customers/staff of their division.
-- `DailySaleController` — division admins auto-tagged to their own division.
-- `DashboardController::stats` — grand total + per-division revenue; **only
-  `approved`+`confirmed` bookings count** (same rule as the frontend analytics).
-- `UploadController::receipt` — validates the file is an image ≤8MB, stores it under
-  `storage/app/public/receipts/2026-10/`, returns a public URL saved on the order/booking.
+### 2.3 Guards — `core/deps.py`
+`require_roles("super_admin", "division_admin")` is the bouncer on admin routes;
+`ensure_division(user, division_id)` is the second lock — bakery admin writing a hotel
+room gets 403. (The pytest suite proves both directions.)
 
-### 2.4 Routes — `routes/api.php`
-Three blocks: **public** (register, login, catalogue browsing, `/health`),
-**authenticated** (`auth:sanctum` — bookings, orders, receipt upload, sales),
-**admin** (`role:...` — everything managerial). The frontend's `Settings` page pings
-`GET /api/health` to display "API connected" vs "Demo mode".
+### 2.4 Routers
+- `catalog.py` — public reads (`/divisions`, `/products`, `/rooms/{slug}`,
+  `/rooms/{id}/availability`, `/facilities`); writes are role+division scoped.
+- `bookings.py` — customers see only theirs; hotel admin sees the division's;
+  creation validates dates, checks availability, assigns the room number.
+- `orders.py` — receipt **required** (422 without it); stock decremented; division tagged.
+- `admin.py` — users (only super admin creates division admins), daily sales log,
+  `POST /upload/receipt` (JPG/PNG/WebP ≤8MB → `/uploads/...` URL),
+  `/dashboard/stats` (grand total + per-division revenue, confirmed payments only),
+  `/settings` (Ventures account).
 
-### 2.5 Database — `database/schema.sql`
-Every table with UUID primary keys, foreign keys (`division_id`, `user_id`…), JSON
-columns for images/addresses, plus seed rows for the 6 divisions and a super admin
-(`admin@univent.ui.edu.ng` / `password` — **change after first login**).
-Later additions are `ALTER TABLE` blocks at the bottom (receipt columns, `daily_sales`).
-
----
+### 2.5 Seed — `app/seed.py` + `seed_data.py`
+Idempotent (re-runnable, skips existing rows): 6 divisions, 6 categories, 6 rooms,
+11 products, 4 facilities, super admin + 6 division admins (`password` — change after login).
 
 ## 3. How a request flows (two examples)
 
 **Customer books a room:**
-`POST /api/bookings` (token) → `BookingController::store` validates →
-`Room::findOrFail` → nights × price computed → `Booking::create(status: pending)` →
-frontend assigns room number, customer uploads receipt → admin confirms →
-`PUT /api/bookings/{id}` sets `approved`/`confirmed`.
+`POST /api/bookings` (token) → validates dates → availability check →
+`assign_room_number` → row created `pending`/`awaiting_confirmation` →
+receipt uploaded → admin `PUT /api/bookings/{id}` → `approved`/`confirmed`.
 
 **Hotel admin edits a price:**
-`PUT /api/rooms/{id}` (token, `role` middleware) → controller loads room →
-`managesDivision($room->division_id)`? hotel admin + hotel room → allowed →
-update → frontend re-fetches and every price on the site changes.
+`PUT /api/rooms/{id}` (token + `division_admin`) → `ensure_division(hotels)` →
+update → every future `GET /rooms` returns the new price.
 
-## 4. What is NOT done yet (be honest in your presentation)
-1. No runnable Laravel shell — needs `composer create-project laravel/laravel` + copying these files in.
-2. No migrations/seeders (raw `schema.sql` instead) and no automated tests.
-3. Frontend still uses browser storage; `store/*.ts` must be swapped to `api.ts` calls.
-4. Receipts stored locally in demo; production needs `storage:link` + backups.
-5. No email/SMS notifications on confirm, no rate limiting, no audit log.
+## 4. Testing & running
+- `pytest tests/ -q` → 7 tests: health, catalogue, register→book→availability-drop,
+  admin approve→revenue, cross-division 403s, receipt-required + stock decrement, sales scoping.
+- Interactive docs at `/docs` when the server runs.
+- SQLite file `univent.db` is created on first run; tests use a temp file and never touch it.
 
-## 5. Key terms glossary
-- **Eloquent/ORM** — write PHP, it writes SQL for you.
-- **Sanctum token** — a secret string proving "I'm logged in as X" on each request.
-- **Middleware** — code that runs before the controller (auth, roles).
-- **bcrypt** — one-way password scrambling; stolen hashes can't be reversed.
-- **`$fillable`** — whitelist against mass-assignment attacks.
-- **403 vs 401** — 401 "who are you?" (not logged in), 403 "not yours" (wrong role/division).
+## 5. Deploying (Render)
+`render.yaml` creates the web service (`pip install -r requirements.txt`,
+`uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/api/health`)
+plus a free Postgres DB wired as `DATABASE_URL`. Set `FRONTEND_URL` to the Vercel URL
+for CORS, then point the frontend's `VITE_API_URL` at `https://<service>/api`.
+Run `python -m app.seed` once via the Render shell.
+
+## 6. Key terms glossary
+- **FastAPI** — Python web framework; auto-generates `/docs`.
+- **SQLAlchemy/ORM** — write Python, it writes SQL (works on SQLite AND Postgres).
+- **JWT** — signed token proving "I'm logged in as X"; server verifies the signature.
+- **bcrypt** — one-way password scrambling.
+- **CORS** — which websites may call the API (localhost + your Vercel URL).
+- **401 vs 403** — 401 "who are you?", 403 "not yours".

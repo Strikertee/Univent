@@ -56,7 +56,7 @@ class ApiService {
     return this.client
   }
 
-  /** True when the Laravel API answers — otherwise the site runs in demo mode. */
+  /** True when the FastAPI backend answers — otherwise the site runs in demo mode. */
   async checkConnection(timeoutMs = 5000): Promise<boolean> {
     try {
       const res = await this.client.get<ApiResponse<unknown>>('/health', { timeout: timeoutMs })

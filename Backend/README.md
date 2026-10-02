@@ -1,48 +1,46 @@
-# Univent Backend (Laravel 11 + Sanctum + MySQL)
+# Univent API — FastAPI + SQLAlchemy (SQLite local, Postgres on Render)
 
-Multi-division marketplace API for University of Ibadan Ventures.
+REST backend for the University of Ibadan Ventures marketplace.
+**Status: built, 7/7 tests passing, running.** See `../docs/03-BACKEND-LEARNERS-GUIDE.md`.
+
+## Run locally
+```bash
+cd Backend
+python -m venv .venv
+.\.venv\Scripts\activate          # Windows  |  source .venv/bin/activate on Mac/Linux
+pip install -r requirements.txt
+cp .env.example .env
+python -m app.seed                # divisions, catalogue, admins (re-runnable)
+python -m uvicorn app.main:app --port 8000
+```
+- API: http://127.0.0.1:8000/api/health
+- Interactive docs: http://127.0.0.1:8000/docs
+- Tests: `python -m pytest tests/ -q`
+
+## Deploy (Render)
+Push, then **New → Blueprint** and select `render.yaml` (web service + Postgres).
+Set `FRONTEND_URL` to the Vercel URL, then run once in the Render shell:
+```bash
+python -m app.seed
+```
+Point the frontend at it: `VITE_API_URL=https://<service>.onrender.com/api`.
+
+## Endpoints (all under `/api`, envelope `{success, data, message}`)
+- `GET /health` · `POST /auth/register|login` · `GET|PUT /auth/profile`
+- `GET /divisions`, `GET /divisions/{slug}` · `POST|PUT /divisions` (super admin)
+- `GET|POST /categories` · `GET /products`, `GET /products/{slug}` · `POST|PUT|DELETE /products`
+- `GET /rooms`, `GET /rooms/{slug}`, `GET /rooms/{id}/availability` · `POST|PUT|DELETE /rooms`
+- `GET|POST /facilities`
+- `GET|POST /bookings`, `GET|PUT /bookings/{id}`, `POST /bookings/{id}/cancel`
+- `GET|POST /orders`, `GET|PUT /orders/{id}`
+- `GET|POST|PUT|DELETE /users` (admin) · `GET|POST|DELETE /sales`
+- `POST /upload/receipt` (JPG/PNG/WebP ≤8MB) · `GET /dashboard/stats` · `GET /settings`
 
 ## Roles
-- `super_admin` — oversees all 6 divisions (full access)
-- `division_admin` — scoped to `division_id` (enforced by `role` middleware + controllers)
-- `customer` — shop / book
-- `staff` — read-only support
-
-## Quick start
-```bash
-# 1. Fresh Laravel shell, then drop these files in:
-composer create-project laravel/laravel backend
-cd backend
-composer require laravel/sanctum
-# copy app/, routes/, database/ from this folder over the fresh install
-
-# 2. Register the role middleware alias in bootstrap/app.php:
-#   ->withMiddleware(function (Middleware $middleware) {
-#       $middleware->alias(['role' => \App\Http\Middleware\CheckRole::class]);
-#   })
-
-# 3. Database
-cp .env.example .env
-mysql -u root -p -e "CREATE DATABASE univent"
-mysql -u root -p univent < database/schema.sql
-php artisan key:generate
-php artisan storage:link   # exposes uploaded transfer receipts at /storage
-
-# 4. Serve
-php artisan serve --port=8000
-```
-Frontend expects API at `http://localhost:8000/api` (see `Frontend/.env.example` → `VITE_API_URL`).
-Check `GET /api/health` returns `{"success":true}` — the frontend Settings page shows
-"API connected" vs "Demo mode" from this endpoint.
-
-## Divisions seeded
-- bakery-fastfood, petrol-station, printing-press, health-safety, consultancy, hotels
-
-## Demo accounts
-- Super admin: `admin@univent.ui.edu.ng` / `password` (change after first login)
-- Create division admins via `POST /api/users` with `{ role: division_admin, division_id }`
+`super_admin` (all) · `division_admin` (own `division_id` only — enforced per endpoint) ·
+`customer` (own records only). Demo logins (password `password`, change after login):
+`admin@…`, `hotels@…`, `bakery@…`, `petrol@…`, `printing@…`, `hse@…`, `consult@…`.
 
 ## Payments
-Transfer-only. Customers upload receipt photos to `POST /api/upload/receipt`
-(stored under `storage/app/public/receipts`); admins confirm from Orders / Bookings,
-which flips `payment_status` to `confirmed`. Only confirmed payments count as revenue.
+Transfer-only. Receipts upload to `/uploads/receipts/…`; admins confirm from
+Orders/Bookings; **only `confirmed` payments count as revenue**.
