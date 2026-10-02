@@ -30,11 +30,11 @@ Three roles, three experiences:
 - **Customer** — shops, books, pays, tracks orders/bookings, edits own cart. Never sees admin tools.
 - **Division admin** — manages ONLY their division's products, rooms, orders, bookings.
 - **Super admin** — sees and manages ALL six divisions, users and settings.
-The frontend hides admin pages by role (`AdminRoute`), and the Laravel API re-checks the role on
+The frontend hides admin pages by role (`AdminRoute`), and the FastAPI backend re-checks the role on
 every request — security is enforced on the server, not just in the browser.
 
 ### 2.3 Real data, no fakes (frontend-first persistence)
-Until the Laravel backend is connected, the site stores **real user-created data** in the browser's
+Until the FastAPI backend is connected, the site stores **real user-created data** in the browser's
 `localStorage` (`src/store/shop.ts`):
 - `univent_orders` — every completed payment
 - `univent_bookings` — every submitted hotel booking
@@ -82,19 +82,20 @@ Frontend/src/
   context/                    AuthContext (login/session), CartContext (cart state)
   store/shop.ts               real orders/bookings in localStorage
   data/mockData.ts            catalogue content (divisions, rooms, products, facilities)
-  services/api.ts             REST client — plug the Laravel API in here
+  services/api.ts             REST client — talks to the FastAPI backend when connected
 Backend/
-  routes/api.php              REST endpoints (auth, divisions, products, rooms, bookings, orders)
-  app/Http/Controllers/Api/   role-scoped controllers
-  database/schema.sql         full MySQL schema + division seeds
+  app/main.py                 app factory, CORS, /api/health, routers
+  app/models.py               10 tables + camelCase serializers
+  app/routers/                auth, catalogue, bookings, orders, admin
+  app/seed.py                 idempotent seed: divisions, catalogue, admins
 ```
 
 ## 4. How to extend it (common tasks)
 - **Add a product:** `mockData.ts → bakeryProducts` (frontend) or `POST /api/products` (backend).
-- **Add a division:** `mockData.ts → divisions` + `database/schema.sql` seed + Laravel row.
+- **Add a division:** `mockData.ts → divisions` + `Backend/app/seed_data.py` + re-run `python -m app.seed`.
 - **Go live with transfers:** the Ventures account lives in `src/data/account.ts`; on the
   backend, store receipts server-side and notify admins (SMS/email) the moment one lands.
 - **Connect the backend:** set `VITE_API_URL` in `Frontend/.env`; check Admin → Settings —
-  "API connected" means the Laravel API answers `/api/health`, "Demo mode" means the site is
+  "API connected" means the FastAPI backend answers `/api/health`, "Demo mode" means the site is
   running on local data. Auth already tries the API first; catalogue/orders/bookings swap to API
   calls at the `store/*.ts` seam when the backend goes live.

@@ -38,7 +38,7 @@ a single account, cart and checkout.
 
 ### 4. Methodology / Tech stack
 - **Frontend:** React + TypeScript + Vite + Tailwind CSS + shadcn/ui + Framer Motion.
-- **Backend:** Laravel (PHP) + Sanctum auth + MySQL + REST API.
+- **Backend:** Python + FastAPI + SQLAlchemy + JWT + REST API.
 - Role-based access control enforced in UI routes and re-checked on the API.
 - Transfer-only payments with receipt upload and one-minute admin confirmation, end-to-end.
 
@@ -49,7 +49,7 @@ a single account, cart and checkout.
 - Accessible, high-contrast, mobile-responsive design with interactive glow feedback.
 
 ### 6. Future work
-Connect the live Laravel API, add SMS/email notifications,
+Connect the live FastAPI backend fully (swap the remaining `store/*.ts` reads to `api.ts`), add SMS/email notifications,
 add SMS/email notifications, delivery tracking, and a mobile app shell.
 
 ---
