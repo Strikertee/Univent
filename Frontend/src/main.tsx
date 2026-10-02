@@ -10,8 +10,8 @@ import './index.css'
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
+      <CartProvider>
+        <AuthProvider>
           <App />
           <Toaster
             position="top-right"
@@ -37,8 +37,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               },
             }}
           />
-        </CartProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </CartProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

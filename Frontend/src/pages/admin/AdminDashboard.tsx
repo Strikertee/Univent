@@ -59,7 +59,7 @@ export function AdminDashboard() {
           [String(scopedBookings.length), 'Bookings'],
           [formatCurrency(verifiedBookingsTotal), 'Hotel payments verified'],
         ].map(([v, l]) => (
-          <Card key={l} className="cursor-default"><CardContent className="p-5"><div className="text-2xl font-extrabold text-primary-700">{v}</div><div className="text-sm text-gray-500">{l}</div></CardContent></Card>
+          <Card key={l} className="cursor-default"><CardContent className="p-5 min-w-0"><div className="text-2xl font-extrabold text-primary-700 break-words">{v}</div><div className="text-sm text-gray-500">{l}</div></CardContent></Card>
         ))}
       </div>
       {!isSuper && myDivision && (

@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.core.deps import ensure_division, get_current_user, ok, require_roles
 from app.core.security import hash_password
 from app.db import get_db
-from app.models import Booking, DailySale, Division, Order, User
+from app.models import Booking, Cart, DailySale, Division, Order, User
 
 router = APIRouter(tags=["admin"])
 
@@ -124,6 +124,34 @@ def delete_sale(sale_id: str, db: Session = Depends(get_db),
     db.delete(sale)
     db.commit()
     return ok(None, "Deleted")
+
+
+# ---------- Roaming cart (one per user, follows the account across devices) ----------
+@router.get("/cart")
+def get_cart(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    cart = db.get(Cart, user.id)
+    if not cart:
+        return ok({"items": [], "fulfillment": "pickup", "updatedAt": None})
+    return ok(cart.to_dict())
+
+
+@router.put("/cart")
+def save_cart(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    items = body.get("items", [])
+    if not isinstance(items, list):
+        raise HTTPException(status_code=422, detail="items must be a list")
+    fulfillment = body.get("fulfillment", "pickup")
+    if fulfillment not in ("pickup", "delivery"):
+        raise HTTPException(status_code=422, detail="fulfillment must be pickup or delivery")
+    cart = db.get(Cart, user.id)
+    if not cart:
+        cart = Cart(user_id=user.id, items=items, fulfillment=fulfillment)
+        db.add(cart)
+    else:
+        cart.items, cart.fulfillment = items, fulfillment
+    db.commit()
+    db.refresh(cart)
+    return ok(cart.to_dict())
 
 
 # ---------- Receipt upload ----------

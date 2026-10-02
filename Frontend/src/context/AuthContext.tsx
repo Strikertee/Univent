@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { User, LoginCredentials, RegisterData } from '../types'
 import { api } from '../services/api'
 import { probeBackend, pullAll } from '../services/sync'
+import { useCart } from '../context/CartContext'
 
 interface AuthContextType {
   user: User | null
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { clearLocalCart } = useCart()
 
   const isAuthenticated = !!user && !!token
 
@@ -190,6 +192,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Logout error:', error)
     } finally {
       clear()
+      // The cart belongs to the signed-in user — wipe it locally so the next
+      // person on this browser never sees it. clearLocalCart does NOT sync,
+      // so the server copy stays put for the user's other devices.
+      clearLocalCart()
     }
   }
 

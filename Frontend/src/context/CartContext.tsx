@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { Cart, CartItem, DELIVERY_FEE } from '../types'
+import { api, hasRealToken } from '../services/api'
 
 export type Fulfillment = 'pickup' | 'delivery'
 
@@ -13,6 +14,8 @@ interface CartContextType {
   removeItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
+  /** Wipe locally WITHOUT syncing (logout) — the server copy stays for other devices. */
+  clearLocalCart: () => void
   setFulfillment: (f: Fulfillment) => void
   getItemCount: (type: CartItem['type'], id: string) => number
   isInCart: (type: CartItem['type'], id: string) => boolean
@@ -21,6 +24,35 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 const FULFILLMENT_KEY = 'univent_fulfillment'
+export const CART_UPDATED_KEY = 'univent_cart_updated'
+
+/** Allows non-React code (sync layer) to replace the cart, e.g. after a server pull. */
+let externalReplacer: ((cart: Cart, updatedAt: string) => void) | null = null
+export function _registerCartReplacer(fn: (cart: Cart, updatedAt: string) => void) {
+  externalReplacer = fn
+}
+export function replaceCartState(cart: Cart, updatedAt: string) {
+  externalReplacer?.(cart, updatedAt)
+}
+
+/** Pushes the cart to the account (roaming) — no-op without a real login token. */
+async function pushCartToServer(cart: Cart, updatedAt: string): Promise<void> {
+  if (!hasRealToken()) return
+  try {
+    await api.getClient().put('/cart', {
+      items: cart.items.map(i => ({
+        id: i.id, type: i.type, productId: i.productId, roomId: i.roomId,
+        facilityId: i.facilityId, quantity: i.quantity, price: i.price,
+        name: i.name, image: i.image, checkIn: i.checkIn, checkOut: i.checkOut,
+        guests: i.guests,
+      })),
+      fulfillment: cart.fulfillment,
+      updatedAt,
+    }, { timeout: 15000 })
+  } catch (error) {
+    console.warn('Cart sync failed (kept locally):', error)
+  }
+}
 
 const initialCart: Cart = {
   items: [],
@@ -55,6 +87,10 @@ function calculateTotals(items: CartItem[], fulfillment: Fulfillment): Omit<Cart
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart>(initialCart)
   const [isOpen, setIsOpen] = useState(false)
+  const [updatedAt, setUpdatedAt] = useState<string>(() => localStorage.getItem(CART_UPDATED_KEY) || '')
+  const skipPush = useRef(true) // skip the very first (mount) effect run
+  const suppressPush = useRef(false) // pulls / logout wipes must not echo back up
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Load cart + fulfillment choice from localStorage on mount
   useEffect(() => {
@@ -77,7 +113,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('univent_cart', JSON.stringify(cart))
-  }, [cart])
+    localStorage.setItem(CART_UPDATED_KEY, updatedAt)
+  }, [cart, updatedAt])
+
+  const stamp = useCallback(() => {
+    const ts = new Date().toISOString()
+    setUpdatedAt(ts)
+    return ts
+  }, [])
+
+  // Push cart to the account (roaming) when logged in with a real token.
+  useEffect(() => {
+    if (skipPush.current) {
+      skipPush.current = false
+      return
+    }
+    if (suppressPush.current) {
+      suppressPush.current = false
+      return
+    }
+    const token = localStorage.getItem('auth_token')
+    if (!token || token.startsWith('demo-')) return
+    if (pushTimer.current) clearTimeout(pushTimer.current)
+    pushTimer.current = setTimeout(() => {
+      pushCartToServer(cart, updatedAt).catch(() => {})
+    }, 1500)
+    return () => {
+      if (pushTimer.current) clearTimeout(pushTimer.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, updatedAt])
 
   const openCart = useCallback(() => setIsOpen(true), [])
   const closeCart = useCallback(() => setIsOpen(false), [])
@@ -86,7 +151,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback((newItem: Omit<CartItem, 'id'>) => {
     setCart(prevCart => {
       const existingIndex = prevCart.items.findIndex(
-        item => item.type === newItem.type && 
+        item => item.type === newItem.type &&
         ((item.type === 'product' && item.productId === newItem.productId) ||
          (item.type === 'room' && item.roomId === newItem.roomId) ||
          (item.type === 'facility' && item.facilityId === newItem.facilityId))
@@ -112,9 +177,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const totals = calculateTotals(updatedItems, prevCart.fulfillment)
       return { ...prevCart, items: updatedItems, ...totals }
     })
+    stamp()
     // Auto-open cart when adding items
     setIsOpen(true)
-  }, [])
+  }, [stamp])
 
   const removeItem = useCallback((id: string) => {
     setCart(prevCart => {
@@ -122,7 +188,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const totals = calculateTotals(updatedItems, prevCart.fulfillment)
       return { ...prevCart, items: updatedItems, ...totals }
     })
-  }, [])
+    stamp()
+  }, [stamp])
 
   const updateQuantity = useCallback((id: string, quantity: number) => {
     if (quantity <= 0) {
@@ -137,10 +204,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const totals = calculateTotals(updatedItems, prevCart.fulfillment)
       return { ...prevCart, items: updatedItems, ...totals }
     })
-  }, [removeItem])
+    stamp()
+  }, [removeItem, stamp])
 
   const clearCart = useCallback(() => {
     setCart(prev => ({ ...initialCart, fulfillment: prev.fulfillment }))
+    stamp()
+  }, [stamp])
+
+  /** Wipe locally WITHOUT syncing (logout) — the server copy stays for other devices. */
+  const clearLocalCart = useCallback(() => {
+    suppressPush.current = true
+    setCart({ ...initialCart })
+    setUpdatedAt('')
+    localStorage.removeItem('univent_cart')
+    localStorage.removeItem(CART_UPDATED_KEY)
+    setIsOpen(false)
   }, [])
 
   const setFulfillment = useCallback((f: Fulfillment) => {
@@ -149,11 +228,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const totals = calculateTotals(prevCart.items, f)
       return { ...prevCart, fulfillment: f, ...totals }
     })
+    stamp()
+  }, [stamp])
+
+  // Register the external replacer used by the sync layer after a server pull.
+  useEffect(() => {
+    _registerCartReplacer((c: Cart, ts: string) => {
+      suppressPush.current = true
+      const totals = calculateTotals(c.items || [], c.fulfillment || 'pickup')
+      setCart({ ...c, ...totals })
+      setUpdatedAt(ts)
+    })
+    return () => _registerCartReplacer(() => {})
   }, [])
 
   const getItemCount = useCallback((type: CartItem['type'], id: string) => {
     const item = cart.items.find(
-      i => i.type === type && 
+      i => i.type === type &&
       ((type === 'product' && i.productId === id) ||
        (type === 'room' && i.roomId === id) ||
        (type === 'facility' && i.facilityId === id))
@@ -163,7 +254,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const isInCart = useCallback((type: CartItem['type'], id: string) => {
     return cart.items.some(
-      i => i.type === type && 
+      i => i.type === type &&
       ((type === 'product' && i.productId === id) ||
        (type === 'room' && i.roomId === id) ||
        (type === 'facility' && i.facilityId === id))
@@ -181,6 +272,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem,
       updateQuantity,
       clearCart,
+      clearLocalCart,
       setFulfillment,
       getItemCount,
       isInCart,

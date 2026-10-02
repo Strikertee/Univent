@@ -67,7 +67,7 @@ export function Dashboard() {
           <Link key={s.label} to={s.to}>
             <Card><CardContent className="p-5 flex items-center gap-3">
               <span className={`h-11 w-11 rounded-xl ${s.color} text-white flex items-center justify-center shrink-0`}><s.icon className="h-5 w-5" /></span>
-              <span><span className="text-2xl font-extrabold block leading-none">{s.value}</span><span className="text-xs text-gray-500">{s.label}</span></span>
+              <span className="min-w-0"><span className="text-2xl font-extrabold block leading-none break-words">{s.value}</span><span className="text-xs text-gray-500">{s.label}</span></span>
             </CardContent></Card>
           </Link>
         ))}

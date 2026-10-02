@@ -157,7 +157,7 @@ export function BookingPage() {
               <div className="font-bold mt-1">{VENTURES_ACCOUNT.accountName}</div>
               <div className="text-sm text-blue-100">{VENTURES_ACCOUNT.bank}</div>
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-xl font-extrabold tracking-wider text-secondary-400">{VENTURES_ACCOUNT.accountNumber}</span>
+                <span className="text-xl font-extrabold tracking-wider text-secondary-400 break-all">{VENTURES_ACCOUNT.accountNumber}</span>
                 <button type="button" onClick={copyNumber} className="inline-flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 rounded-lg px-2.5 py-1.5">
                   {copied ? <Check className="h-3.5 w-3.5" /> : null} {copied ? 'Copied!' : 'Copy'}
                 </button>

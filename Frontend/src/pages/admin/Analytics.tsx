@@ -103,7 +103,7 @@ export function SuperAnalytics() {
               <span className="text-2xl">{d.icon}</span>
               <b className="text-sm">{d.name}</b>
             </div>
-            <div className="text-2xl font-extrabold text-primary-700 mt-2">{formatCurrency(d.total)}</div>
+            <div className="text-2xl font-extrabold text-primary-700 mt-2 break-words">{formatCurrency(d.total)}</div>
             <div className="mt-2 space-y-1 text-xs text-gray-500">
               <div className="flex justify-between"><span>Shop orders ({d.orderCount})</span><b>{formatCurrency(d.orderRev)}</b></div>
               {d.id === 'div-hotels' && <div className="flex justify-between"><span>Hotel payments ({d.bookCount})</span><b>{formatCurrency(d.bookRev)}</b></div>}

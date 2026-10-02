@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  // Class-based dark mode (never auto-triggered) = the site always renders
+  // the light theme, so phone-level dark mode can't wash out text.
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",

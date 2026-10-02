@@ -351,3 +351,22 @@ class DailySale(Base):
             "date": self.date.isoformat(), "item": self.item, "amount": self.amount,
             "enteredBy": self.entered_by,
         }
+
+
+class Cart(Base):
+    """One roaming cart per user — follows the account across phones.
+    The phone's localStorage cart is the offline copy; this is the synced one."""
+
+    __tablename__ = "carts"
+
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), primary_key=True)
+    items: Mapped[list] = mapped_column(JSONType, default=list)
+    fulfillment: Mapped[str] = mapped_column(String(20), default="pickup")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+    def to_dict(self) -> dict:
+        return {
+            "items": self.items or [],
+            "fulfillment": self.fulfillment or "pickup",
+            "updatedAt": self.updated_at.isoformat() if self.updated_at else None,
+        }

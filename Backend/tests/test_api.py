@@ -141,3 +141,37 @@ def test_daily_sales_scoped():
     bakery = auth_headers("bakery@univent.ui.edu.ng")
     others = client.get("/api/sales", headers=bakery).json()["data"]
     assert not any(s["item"] == "Hall hire" for s in others)
+
+def test_roaming_cart_follows_account():
+    import uuid
+    email = f"shopper-{uuid.uuid4().hex[:6]}@example.com"
+    client.post("/api/auth/register", json={
+        "firstName": "Shop", "lastName": "Per", "email": email,
+        "phone": "08030000002", "password": "secret123", "passwordConfirmation": "secret123",
+    })
+    headers = auth_headers(email, "secret123")
+    # unauthenticated cart access is rejected
+    assert client.get("/api/cart").status_code in (401, 403)
+    # empty cart by default
+    assert client.get("/api/cart", headers=headers).json()["data"]["items"] == []
+    # save from "phone 1", load from "phone 2"
+    items = [{"id": "x1", "type": "product", "productId": "prod-meatpie",
+              "quantity": 3, "price": 500, "name": "Meat Pie", "image": ""}]
+    saved = client.put("/api/cart", json={"items": items, "fulfillment": "delivery",
+                                          "updatedAt": "2026-10-02T10:00:00"},
+                       headers=headers).json()["data"]
+    assert saved["fulfillment"] == "delivery"
+    loaded = client.get("/api/cart", headers=headers).json()["data"]
+    assert loaded["items"][0]["quantity"] == 3
+    assert loaded["updatedAt"] is not None
+    # another customer sees nothing (carts are per-account secrets)
+    other_email = f"other-{uuid.uuid4().hex[:6]}@example.com"
+    client.post("/api/auth/register", json={
+        "firstName": "O", "lastName": "T", "email": other_email,
+        "phone": "08030000003", "password": "secret123", "passwordConfirmation": "secret123",
+    })
+    other = auth_headers(other_email, "secret123")
+    assert client.get("/api/cart", headers=other).json()["data"]["items"] == []
+    # bad payloads rejected
+    bad = client.put("/api/cart", json={"items": "nope"}, headers=headers)
+    assert bad.status_code == 422
