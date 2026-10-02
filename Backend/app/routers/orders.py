@@ -75,12 +75,18 @@ def create_order(body: dict, db: Session = Depends(get_db), user: User = Depends
     shipping = DELIVERY_FEE if (fulfillment == "delivery" and has_products) else 0.0
 
     addr = body.get("shippingAddress", {}) or {}
+    client_ref = body.get("ref")
+    if client_ref:
+        existing = db.query(Order).filter(
+            Order.payment_reference == client_ref, Order.user_id == user.id).first()
+        if existing:
+            return ok(existing.to_dict(), "Order already submitted")
     order = Order(
         user_id=user.id,
         division_id=list(divisions)[0] if len(divisions) == 1 else "multiple",
         status="Processing", subtotal=subtotal, tax=0, shipping=shipping,
         total=subtotal + shipping, payment_status="awaiting_confirmation",
-        payment_method="transfer", payment_reference=make_ref(),
+        payment_method="transfer", payment_reference=client_ref or make_ref(),
         fulfillment=fulfillment, receipt=body.get("receipt"),
         shipping_address=addr, billing_address=body.get("billingAddress", addr),
         notes=body.get("notes"),

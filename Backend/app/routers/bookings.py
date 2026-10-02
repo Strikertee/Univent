@@ -77,14 +77,20 @@ def create_booking(body: dict, db: Session = Depends(get_db), user: User = Depen
         raise HTTPException(status_code=422, detail="checkOut must be after checkIn")
     nights = max(1, (check_out - check_in).days)
     total = room.price * nights
+    client_ref = body.get("ref")
+    if client_ref:
+        existing = db.query(Booking).filter(Booking.ref == client_ref, Booking.user_id == user.id).first()
+        if existing:
+            return ok(existing.to_dict(), "Booking already submitted")
     booking = Booking(
-        user_id=user.id, room_id=room.id, division_id=room.division_id,
+        user_id=user.id, user_email=body.get("userEmail", user.email),
+        room_id=room.id, division_id=room.division_id,
         check_in=check_in, check_out=check_out,
         guests=int(body.get("guests", 2)), adults=int(body.get("adults", 2)),
         children=int(body.get("children", 0)),
         total_nights=nights, price_per_night=room.price,
         subtotal=total, tax=0, total=total,
-        method=body.get("method", "transfer"), ref=make_ref("BK"),
+        method=body.get("method", "transfer"), ref=client_ref or make_ref("BK"),
         status="pending", payment_status="awaiting_confirmation",
         room_number=assign_room_number(db, room),
         receipt=body.get("receipt"),

@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from 'react'
+import { api, hasRealToken } from '../services/api'
+import { rememberServerId, serverIdFor } from '../services/idmap'
 
 export interface DailySale {
   id: string
@@ -11,7 +13,13 @@ export interface DailySale {
   createdAt: string
 }
 
-const SALES_KEY = 'univent_daily_sales'
+export const SALES_KEY = 'univent_daily_sales'
+
+/** Re-render hook subscribers (used after a background API pull). */
+export function emitSalesChange() {
+  version += 1
+  listeners.forEach(l => l())
+}
 
 function read(): DailySale[] {
   try {
@@ -43,7 +51,21 @@ export function addDailySale(entry: Omit<DailySale, 'id' | 'createdAt'>): DailyS
   const record: DailySale = { ...entry, id: `sale-${Date.now()}`, createdAt: new Date().toISOString() }
   const all = read()
   write([record, ...all])
+  void pushSale(record)
   return record
+}
+
+async function pushSale(record: DailySale): Promise<void> {
+  if (!hasRealToken()) return
+  try {
+    const res = await api.getClient().post('/sales', {
+      divisionId: record.divisionId, date: record.date, item: record.item, amount: record.amount,
+    }, { timeout: 15000 })
+    const serverId = res.data?.data?.id
+    if (serverId) rememberServerId(record.id, serverId)
+  } catch (error) {
+    console.warn('Sales API mirror failed (kept locally):', error)
+  }
 }
 
 export function getDailySales(divisionId?: string): DailySale[] {
@@ -53,6 +75,18 @@ export function getDailySales(divisionId?: string): DailySale[] {
 
 export function deleteDailySale(id: string) {
   write(read().filter(s => s.id !== id))
+  void pushSaleDelete(id)
+}
+
+async function pushSaleDelete(id: string): Promise<void> {
+  if (!hasRealToken()) return
+  const serverId = serverIdFor(id) || (/^sale-/.test(id) ? null : id)
+  if (!serverId) return
+  try {
+    await api.getClient().delete(`/sales/${serverId}`, { timeout: 15000 })
+  } catch (error) {
+    console.warn('Sales delete mirror failed:', error)
+  }
 }
 
 export function salesTotal(sales: DailySale[]): number {

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { User, LoginCredentials, RegisterData } from '../types'
 import { api } from '../services/api'
+import { probeBackend, pullAll } from '../services/sync'
 
 interface AuthContextType {
   user: User | null
@@ -94,6 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.warn('API unreachable, keeping stored session')
             }
           }
+          // Sync catalogue + account data from the backend when reachable.
+          void probeBackend().then(online => {
+            if (online) void pullAll()
+          })
         } catch (error) {
           console.error('Auth initialization failed:', error)
           clear()
@@ -121,6 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.success && response.data) {
         const { user: userData, token: authToken } = response.data
         persist(userData, authToken)
+        // Real JWT — pull server data into the local stores.
+        void probeBackend().then(online => {
+          if (online) void pullAll()
+        })
         return userData
       }
       throw new Error(response.message || 'Login failed')
@@ -137,7 +146,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Still allow login offline as customer — backend not required for demo
         console.warn('API login failed, using offline demo session:', apiError)
       }
-
       const namePart = email.split('@')[0].replace(/[._-]+/g, ' ').trim() || 'Demo User'
       const [firstName, ...rest] = namePart.split(' ')
       const u = demoUser(email, firstName.charAt(0).toUpperCase() + firstName.slice(1), (rest.join(' ') || 'User').replace(/\b\w/g, c => c.toUpperCase()))
@@ -159,6 +167,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.success && response.data) {
         const { user: userData, token: authToken } = response.data
         persist(userData, authToken)
+        void probeBackend().then(online => {
+          if (online) void pullAll()
+        })
         return userData
       }
       throw new Error(response.message || 'Registration failed')

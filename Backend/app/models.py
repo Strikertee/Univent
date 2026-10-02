@@ -210,6 +210,7 @@ class Booking(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    user_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     room_id: Mapped[str] = mapped_column(String(36), ForeignKey("rooms.id"))
     division_id: Mapped[str] = mapped_column(String(36), ForeignKey("divisions.id"))
     check_in: Mapped[date] = mapped_column(Date)
@@ -239,10 +240,16 @@ class Booking(Base):
     room: Mapped["Room"] = relationship(back_populates="bookings")
 
     def to_dict(self) -> dict:
+        room_image = None
+        try:
+            imgs = self.room.images if self.room else []
+            room_image = imgs[0] if imgs else None
+        except Exception:
+            room_image = None
         return {
-            "id": self.id, "ref": self.ref, "userId": self.user_id,
+            "id": self.id, "ref": self.ref, "userId": self.user_id, "userEmail": self.user_email,
             "roomId": self.room_id, "roomSlug": self.room.slug if self.room else None,
-            "roomName": self.room.name if self.room else None,
+            "roomName": self.room.name if self.room else None, "image": room_image,
             "divisionId": self.division_id,
             "checkIn": self.check_in.isoformat(), "checkOut": self.check_out.isoformat(),
             "guests": self.guests, "adults": self.adults, "children": self.children,
@@ -250,7 +257,7 @@ class Booking(Base):
             "pricePerNight": self.price_per_night, "subtotal": self.subtotal,
             "tax": self.tax, "total": self.total, "method": self.method,
             "status": self.status, "paymentStatus": self.payment_status,
-            "roomNumber": self.room_number, "receipt": bool(self.receipt),
+            "roomNumber": self.room_number, "receipt": self.receipt,
             "verifiedAt": self.verified_at.isoformat() if self.verified_at else None,
             "specialRequests": self.special_requests, "requests": self.special_requests,
             "firstName": self.first_name, "lastName": self.last_name,
@@ -293,7 +300,7 @@ class Order(Base):
             "discount": self.discount, "total": self.total,
             "method": self.payment_method, "paymentMethod": self.payment_method,
             "paymentStatus": self.payment_status, "fulfillment": self.fulfillment,
-            "receipt": bool(self.receipt),
+            "receipt": self.receipt,
             "items": [i.to_dict() for i in self.items],
             "firstName": addr.get("firstName", ""), "lastName": addr.get("lastName", ""),
             "email": addr.get("email", ""), "phone": addr.get("phone", ""),

@@ -405,3 +405,30 @@ class ApiService {
 
 export const api = ApiService.getInstance()
 export default api
+
+/** A real JWT (not an offline demo token) means the backend should be used. */
+export function hasRealToken(): boolean {
+  const token = localStorage.getItem('auth_token')
+  return !!token && !token.startsWith('demo-')
+}
+
+/** Uploads a data-URL receipt photo and returns its server URL (or null). */
+export async function uploadDataUrlReceipt(dataUrl: string | null): Promise<string | null> {
+  if (!dataUrl) return null
+  if (!dataUrl.startsWith('data:')) return dataUrl // already a URL
+  try {
+    const res = await fetch(dataUrl)
+    const blob = await res.blob()
+    const form = new FormData()
+    form.append('receipt', blob, 'receipt.jpg')
+    const client = api.getClient()
+    const out = await client.post('/upload/receipt', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 15000,
+    })
+    return out.data?.data?.url ?? null
+  } catch (error) {
+    console.warn('Receipt upload failed, keeping local copy:', error)
+    return null
+  }
+}

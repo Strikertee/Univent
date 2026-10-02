@@ -2,9 +2,16 @@ import { useSyncExternalStore } from 'react'
 import { Room, Product } from '../types'
 import { hotelRooms as seedRooms, bakeryProducts as seedProducts } from '../data/mockData'
 import { getBookings } from './shop'
+import { api, hasRealToken } from '../services/api'
 
-const ROOMS_KEY = 'univent_rooms'
-const PRODUCTS_KEY = 'univent_products'
+export const ROOMS_KEY = 'univent_rooms'
+export const PRODUCTS_KEY = 'univent_products'
+
+/** Re-render hook subscribers (used after a background API pull). */
+export function emitCatalogChange() {
+  version += 1
+  listeners.forEach(l => l())
+}
 
 function read<T>(key: string, seed: T[]): T[] {
   try {
@@ -48,7 +55,21 @@ export function updateRoom(id: string, patch: Partial<Pick<Room, 'price' | 'tota
   if (idx < 0) return null
   rooms[idx] = { ...rooms[idx], ...patch, updatedAt: new Date().toISOString() }
   write(ROOMS_KEY, rooms)
+  void pushRoomUpdate(id, patch)
   return rooms[idx]
+}
+
+async function pushRoomUpdate(id: string, patch: Partial<Room>): Promise<void> {
+  if (!hasRealToken()) return
+  try {
+    await api.getClient().put(`/rooms/${id}`, {
+      ...(patch.price !== undefined ? { price: patch.price } : {}),
+      ...(patch.totalRooms !== undefined ? { totalRooms: patch.totalRooms } : {}),
+      ...(patch.name !== undefined ? { name: patch.name } : {}),
+    }, { timeout: 15000 })
+  } catch (error) {
+    console.warn('Room update mirror failed:', error)
+  }
 }
 
 // ---- Products (bakery admin edits price + stock) ----
@@ -62,7 +83,21 @@ export function updateProduct(id: string, patch: Partial<Pick<Product, 'price' |
   if (idx < 0) return null
   products[idx] = { ...products[idx], ...patch, updatedAt: new Date().toISOString() }
   write(PRODUCTS_KEY, products)
+  void pushProductUpdate(id, patch)
   return products[idx]
+}
+
+async function pushProductUpdate(id: string, patch: Partial<Product>): Promise<void> {
+  if (!hasRealToken()) return
+  try {
+    await api.getClient().put(`/products/${id}`, {
+      ...(patch.price !== undefined ? { price: patch.price } : {}),
+      ...(patch.stock !== undefined ? { stock: patch.stock } : {}),
+      ...(patch.name !== undefined ? { name: patch.name } : {}),
+    }, { timeout: 15000 })
+  } catch (error) {
+    console.warn('Product update mirror failed:', error)
+  }
 }
 
 /**

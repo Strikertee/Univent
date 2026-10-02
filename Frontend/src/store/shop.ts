@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { CartItem } from '../types'
+import { api, hasRealToken, uploadDataUrlReceipt } from '../services/api'
+import { rememberServerId, serverIdFor } from '../services/idmap'
 
 export interface SavedOrder {
   id: string
@@ -60,9 +62,14 @@ export interface SavedBooking {
   verifiedAt: string | null
 }
 
-const ORDERS_KEY = 'univent_orders'
-const BOOKINGS_KEY = 'univent_bookings'
+export const ORDERS_KEY = 'univent_orders'
+export const BOOKINGS_KEY = 'univent_bookings'
 export const CHECKOUT_DRAFT_KEY = 'univent_checkout_draft'
+
+/** Re-render hook subscribers (used after a background API pull). */
+export function emitShopChange() {
+  notify()
+}
 
 function read<T>(key: string): T[] {
   try {
@@ -107,7 +114,34 @@ export function saveOrder(order: Omit<SavedOrder, 'id' | 'date' | 'status'>): Sa
   }
   const all = read<SavedOrder>(ORDERS_KEY)
   write(ORDERS_KEY, [record, ...all])
+  void pushOrder(record) // background mirror to API when logged in with a real token
   return record
+}
+
+/** Mirrors a local order to the backend (no-op offline or in demo mode). */
+async function pushOrder(record: SavedOrder): Promise<void> {
+  if (!hasRealToken()) return
+  try {
+    const receiptUrl = await uploadDataUrlReceipt(record.receipt)
+    const res = await api.getClient().post('/orders', {
+      ref: record.ref,
+      divisionId: record.divisionId,
+      fulfillment: record.fulfillment,
+      receipt: receiptUrl || undefined,
+      shippingAddress: {
+        firstName: record.firstName, lastName: record.lastName, email: record.email,
+        phone: record.phone, address: record.address, city: record.city, state: record.state,
+      },
+      items: record.items.map(i => ({
+        type: i.type, productId: i.productId, roomId: i.roomId,
+        quantity: i.quantity, price: i.price, name: i.name, image: i.image,
+      })),
+    }, { timeout: 15000 })
+    const serverId = res.data?.data?.id
+    if (serverId) rememberServerId(record.id, serverId)
+  } catch (error) {
+    console.warn('Order API mirror failed (kept locally):', error)
+  }
 }
 
 export function getOrders(userId?: string): SavedOrder[] {
@@ -121,7 +155,22 @@ export function updateOrder(id: string, patch: Partial<SavedOrder>): SavedOrder 
   if (idx < 0) return null
   all[idx] = { ...all[idx], ...patch }
   write(ORDERS_KEY, all)
+  void pushOrderUpdate(id, patch)
   return all[idx]
+}
+
+async function pushOrderUpdate(id: string, patch: Partial<SavedOrder>): Promise<void> {
+  if (!hasRealToken()) return
+  const serverId = serverIdFor(id) || (/^(order|booking)-/.test(id) ? null : id)
+  if (!serverId) return // never mirrored (offline create) — next pull reconciles
+  try {
+    const body: Record<string, unknown> = {}
+    if (patch.status) body.status = patch.status
+    if (patch.paymentStatus) body.paymentStatus = patch.paymentStatus
+    await api.getClient().put(`/orders/${serverId}`, body, { timeout: 15000 })
+  } catch (error) {
+    console.warn('Order update mirror failed:', error)
+  }
 }
 
 // ---- Bookings ----
@@ -133,7 +182,48 @@ export function saveBooking(booking: Omit<SavedBooking, 'id' | 'date'>): SavedBo
   }
   const all = read<SavedBooking>(BOOKINGS_KEY)
   write(BOOKINGS_KEY, [record, ...all])
+  void pushBooking(record) // background mirror to API when logged in with a real token
   return record
+}
+
+/** Looks up the catalogue room id for a slug (needed by the API). */
+function roomIdForSlug(slug: string): string | null {
+  try {
+    const rooms = JSON.parse(localStorage.getItem('univent_rooms') || '[]') as Array<{ id: string; slug: string }>
+    return rooms.find(r => r.slug === slug)?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Mirrors a local booking to the backend (no-op offline or in demo mode). */
+async function pushBooking(record: SavedBooking): Promise<void> {
+  if (!hasRealToken()) return
+  try {
+    const roomId = roomIdForSlug(record.roomSlug)
+    if (!roomId) return
+    const receiptUrl = await uploadDataUrlReceipt(record.receipt)
+    const res = await api.getClient().post('/bookings', {
+      ref: record.ref,
+      roomId,
+      checkIn: record.checkIn,
+      checkOut: record.checkOut,
+      guests: record.guests,
+      adults: record.guests,
+      children: 0,
+      method: 'transfer',
+      receipt: receiptUrl || undefined,
+      requests: record.requests,
+      firstName: record.firstName,
+      lastName: record.lastName,
+      email: record.email,
+      phone: record.phone,
+    }, { timeout: 15000 })
+    const serverId = res.data?.data?.id
+    if (serverId) rememberServerId(record.id, serverId)
+  } catch (error) {
+    console.warn('Booking API mirror failed (kept locally):', error)
+  }
 }
 
 function normalizeBooking(b: SavedBooking): SavedBooking {
@@ -173,7 +263,22 @@ export function updateBooking(id: string, patch: Partial<SavedBooking>): SavedBo
   if (idx < 0) return null
   all[idx] = { ...all[idx], ...patch }
   write(BOOKINGS_KEY, all)
+  void pushBookingUpdate(id, patch)
   return normalizeBooking(all[idx])
+}
+
+async function pushBookingUpdate(id: string, patch: Partial<SavedBooking>): Promise<void> {
+  if (!hasRealToken()) return
+  const serverId = serverIdFor(id) || (/^(order|booking)-/.test(id) ? null : id)
+  if (!serverId) return
+  try {
+    const body: Record<string, unknown> = {}
+    if (patch.status) body.status = patch.status
+    if (patch.paymentStatus) body.paymentStatus = patch.paymentStatus
+    await api.getClient().put(`/bookings/${serverId}`, body, { timeout: 15000 })
+  } catch (error) {
+    console.warn('Booking update mirror failed:', error)
+  }
 }
 
 export function useShopData(userId?: string) {
