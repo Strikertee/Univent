@@ -38,12 +38,13 @@ def _token_for(user: User) -> dict:
 
 @router.post("/register")
 def register(body: RegisterIn, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == body.email).first():
+    email = body.email.strip().lower()
+    if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=422, detail="Email already registered")
     if body.passwordConfirmation and body.password != body.passwordConfirmation:
         raise HTTPException(status_code=422, detail="Passwords do not match")
     user = User(
-        first_name=body.firstName, last_name=body.lastName, email=body.email,
+        first_name=body.firstName, last_name=body.lastName, email=email,
         phone=body.phone, password_hash=hash_password(body.password), role="customer",
     )
     db.add(user)
@@ -54,7 +55,8 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(body: LoginIn, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email).first()
+    email = body.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=422, detail="Invalid email or password")
     if not user.is_active:

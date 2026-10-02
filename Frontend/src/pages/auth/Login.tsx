@@ -29,9 +29,11 @@ export function Login() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const clean = { ...form, email: form.email.trim() }
+    setForm(clean)
     setLoading(true)
     try {
-      const loggedIn = await login(form)
+      const loggedIn = await login(clean)
       toast.success(`Welcome back, ${loggedIn.firstName}!`)
       navigate(destinationFor(loggedIn.role), { replace: true })
     } catch (err: any) {
