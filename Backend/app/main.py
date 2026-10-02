@@ -55,7 +55,7 @@ def remote_seed(key: str = ""):
     """One-shot database seed for hosts without shell access (Render free plan).
     Only works with the SECRET_KEY and only when no users exist yet."""
     from app.db import SessionLocal
-    from app.models import User
+    from app.models import Division, User
     from app.seed import seed
 
     if not key or key != settings.secret_key or key == "change-me-in-production":
@@ -63,10 +63,13 @@ def remote_seed(key: str = ""):
         raise HTTPException(status_code=403, detail="Forbidden")
     db = SessionLocal()
     try:
-        if db.query(User).count() > 0:
-            return {"success": True, "data": {"seeded": False, "reason": "users already exist"}}
+        # Always safe: seed() skips every row that already exists.
         seed(db)
-        return {"success": True, "data": {"seeded": True}}
+        counts = {
+            "users": db.query(User).count(),
+            "divisions": db.query(Division).count(),
+        }
+        return {"success": True, "data": {"seeded": True, **counts}}
     finally:
         db.close()
 
