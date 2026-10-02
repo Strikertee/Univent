@@ -50,6 +50,27 @@ def health():
     return {"success": True, "data": {"service": "univent-api"}}
 
 
+@app.post("/api/seed")
+def remote_seed(key: str = ""):
+    """One-shot database seed for hosts without shell access (Render free plan).
+    Only works with the SECRET_KEY and only when no users exist yet."""
+    from app.db import SessionLocal
+    from app.models import User
+    from app.seed import seed
+
+    if not key or key != settings.secret_key or key == "change-me-in-production":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Forbidden")
+    db = SessionLocal()
+    try:
+        if db.query(User).count() > 0:
+            return {"success": True, "data": {"seeded": False, "reason": "users already exist"}}
+        seed(db)
+        return {"success": True, "data": {"seeded": True}}
+    finally:
+        db.close()
+
+
 app.include_router(auth.router, prefix="/api")
 app.include_router(catalog.router, prefix="/api")
 app.include_router(bookings.router, prefix="/api")
