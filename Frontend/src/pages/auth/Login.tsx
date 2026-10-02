@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
+import { PasswordInput } from '../../components/ui/PasswordInput'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -46,7 +47,7 @@ export function Login() {
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
             <Input label="Email" type="email" placeholder="you@example.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-            <Input label="Password" type="password" placeholder="••••••••" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
+            <PasswordInput label="Password" placeholder="••••••••" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
             <Button className="w-full" size="lg" isLoading={loading}>Sign In</Button>
           </form>
           <p className="text-sm text-center mt-4 text-gray-500">No account? <Link to="/register" className="font-bold text-primary-700">Create one</Link></p>

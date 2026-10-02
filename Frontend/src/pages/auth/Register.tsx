@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
+import { PasswordInput } from '../../components/ui/PasswordInput'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 
@@ -33,8 +34,8 @@ export function Register() {
             <Input label="Last name" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} required />
             <Input label="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
             <Input label="Phone" placeholder="080..." value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required />
-            <Input label="Password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
-            <Input label="Confirm password" type="password" value={form.passwordConfirmation} onChange={e => setForm({ ...form, passwordConfirmation: e.target.value })} required />
+            <PasswordInput label="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
+            <PasswordInput label="Confirm password" value={form.passwordConfirmation} onChange={e => setForm({ ...form, passwordConfirmation: e.target.value })} required />
             <div className="sm:col-span-2"><Button className="w-full" size="lg" isLoading={loading}>Create Account</Button></div>
           </form>
           <p className="text-sm text-center mt-4 text-gray-500">Have an account? <Link to="/login" className="font-bold text-primary-700">Sign in</Link></p>
