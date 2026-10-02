@@ -30,6 +30,19 @@ app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads"
 @app.on_event("startup")
 def startup():
     init_db()
+    # Self-seed on first boot (Render free plan has no Shell access).
+    # seed() is idempotent — it skips rows that already exist.
+    try:
+        from app.db import SessionLocal
+        from app.seed import seed
+
+        db = SessionLocal()
+        try:
+            seed(db)
+        finally:
+            db.close()
+    except Exception as exc:  # never crash boot because of seeding
+        print(f"Seed skipped: {exc}")
 
 
 @app.get("/api/health")
