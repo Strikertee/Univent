@@ -195,17 +195,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    try {
-      const t = localStorage.getItem('auth_token')
-      if (t && !t.startsWith('demo-')) await api.logout()
-    } catch (error) {
-      console.error('Logout error:', error)
-    } finally {
-      clear()
-      // The cart belongs to the signed-in user — wipe it locally so the next
-      // person on this browser never sees it. clearLocalCart does NOT sync,
-      // so the server copy stays put for the user's other devices.
-      clearLocalCart()
+    const t = localStorage.getItem('auth_token')
+    // Clear local session FIRST so logout is instant even if the backend is
+    // asleep (free tier takes ~60s to wake — never make the user wait for that).
+    clear()
+    clearLocalCart()
+    if (t && !t.startsWith('demo-')) {
+      api.logout().catch(error => console.error('Logout error:', error))
     }
   }
 
