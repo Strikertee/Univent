@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapPin, ArrowRight, ShieldAlert } from 'lucide-react'
+import { MapPin, ArrowRight, ShieldAlert, Store } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { useCart } from '../../context/CartContext'
 import { useIsAdmin } from '../../components/auth/RequireDivision'
 import { formatCurrency } from '../../lib/utils'
-import { saveCheckoutDraft, getCheckoutDraft } from '../../store/shop'
+import { saveCheckoutDraft, getCheckoutDraft, CHECKOUT_DRAFT_KEY } from '../../store/shop'
 import toast from 'react-hot-toast'
 
 export function CheckoutPage() {
@@ -32,6 +32,12 @@ export function CheckoutPage() {
     navigate('/payment')
   }
 
+  const skipToPayment = () => {
+    if (cart.items.length === 0) { toast.error('Your cart is empty'); return }
+    localStorage.removeItem(CHECKOUT_DRAFT_KEY)
+    navigate('/payment')
+  }
+
   if (isAdmin) {
     return (
       <div className="container-custom py-16 max-w-md mx-auto text-center">
@@ -45,6 +51,32 @@ export function CheckoutPage() {
     )
   }
 
+  // PICKUP: no address details needed — straight to payment.
+  if (cart.fulfillment === 'pickup') {
+    return (
+      <div className="container-custom py-10 grid lg:grid-cols-[1.4fr_1fr] gap-8">
+        <Card className="cursor-default"><CardContent className="p-6">
+          <h1 className="font-heading text-2xl font-bold flex items-center gap-2">
+            <Store className="h-6 w-6 text-primary-700" /> Pickup Order
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            No delivery details needed — you'll pay now, then come collect your items
+            anytime while stock lasts once approved.
+          </p>
+          <Button className="w-full mt-5" size="lg" onClick={skipToPayment}>
+            Continue to Payment <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </CardContent></Card>
+        <Card className="h-fit cursor-default"><CardContent className="p-6 text-sm space-y-2">
+          <h3 className="font-bold">Order ({cart.totalItems} items)</h3>
+          {cart.items.map(i => <div key={i.id} className="flex justify-between gap-2"><span className="truncate">{i.name} × {i.quantity}</span><b className="shrink-0">{formatCurrency(i.price * i.quantity)}</b></div>)}
+          <div className="border-t pt-2 flex justify-between font-bold text-base"><span>Total</span><span className="text-primary-700">{formatCurrency(cart.total)}</span></div>
+        </CardContent></Card>
+      </div>
+    )
+  }
+
+  // DELIVERY: full delivery details required.
   return (
     <div className="container-custom py-10 grid lg:grid-cols-[1.4fr_1fr] gap-8">
       <Card className="cursor-default"><CardContent className="p-6">

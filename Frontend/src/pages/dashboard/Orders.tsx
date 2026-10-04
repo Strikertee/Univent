@@ -41,6 +41,14 @@ export function Orders() {
                 {o.paymentStatus === 'awaiting_confirmation' && (
                   <p className="text-xs text-gray-500 mt-1">Receipt received — admin confirms within a minute.</p>
                 )}
+                {o.paymentStatus === 'confirmed' && o.fulfillment !== 'delivery' && (
+                  <p className="text-xs font-bold text-primary-700 mt-1 bg-primary-50 border border-primary-200 rounded-lg px-2.5 py-1.5">
+                    ✅ Approved — you can proceed to pickup. Show ref {o.ref} at the counter, anytime while stock lasts.
+                  </p>
+                )}
+                {o.paymentStatus === 'confirmed' && o.fulfillment === 'delivery' && (
+                  <p className="text-xs font-bold text-primary-700 mt-1">✅ Approved — your rider arrives in under 15 minutes anywhere on campus.</p>
+                )}
                 {o.paymentStatus === 'rejected' && (
                   <p className="text-xs text-red-600 mt-1">Receipt was not approved — contact ventures@ui.edu.ng with your reference.</p>
                 )}

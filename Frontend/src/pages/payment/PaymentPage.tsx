@@ -4,13 +4,14 @@ import { Landmark, CheckCircle2, Check } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
+import { Input } from '../../components/ui/Input'
 import { ReceiptUpload } from '../../components/payment/ReceiptUpload'
 import { VENTURES_ACCOUNT } from '../../data/account'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useIsAdmin } from '../../components/auth/RequireDivision'
 import { formatCurrency } from '../../lib/utils'
-import { getCheckoutDraft, saveOrder, makeRef } from '../../store/shop'
+import { getCheckoutDraft, saveOrder, makeRef, CheckoutDraft } from '../../store/shop'
 import { getProducts, updateProduct } from '../../store/catalog'
 import toast from 'react-hot-toast'
 
@@ -19,6 +20,21 @@ export function PaymentPage() {
   const { user } = useAuth()
   const isAdmin = useIsAdmin()
   const draft = getCheckoutDraft()
+  // Pickup skips the address form, so build contact details from the account
+  // (or ask guests for just name/phone/email below).
+  const fallbackDraft: CheckoutDraft | null = draft || (user ? {
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    address: 'Pickup at U.I. Bakery outlet',
+    city: 'Ibadan',
+    state: 'Oyo',
+  } : null)
+  const [guest, setGuest] = useState({ firstName: '', lastName: '', email: '', phone: '' })
+  const contact = fallbackDraft || {
+    ...guest, address: 'Pickup at U.I. Bakery outlet', city: 'Ibadan', state: 'Oyo',
+  }
   const [receipt, setReceipt] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -37,11 +53,11 @@ export function PaymentPage() {
     )
   }
 
-  if (!draft) {
+  if (!draft && cart.fulfillment === 'delivery') {
     return (
       <div className="container-custom py-20 text-center max-w-md mx-auto">
-        <h1 className="font-heading text-2xl font-bold">No delivery details yet</h1>
-        <p className="text-gray-500 mt-2">Please enter your delivery address first.</p>
+        <h1 className="font-heading text-2xl font-bold">Delivery details needed</h1>
+        <p className="text-gray-500 mt-2">Please enter where our rider should deliver to.</p>
         <Link to="/checkout" className="mt-5 inline-block"><Button>Back to Checkout</Button></Link>
       </div>
     )
@@ -70,6 +86,7 @@ export function PaymentPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!receipt) { toast.error('Please upload your transfer receipt first'); return }
+    if (!contact.firstName || !contact.email || !contact.phone) { toast.error('Please fill your contact details'); return }
     setSubmitting(true)
     await new Promise(r => setTimeout(r, 1200))
     const ref = makeRef('UI')
@@ -84,7 +101,7 @@ export function PaymentPage() {
     saveOrder({
       ref,
       userId: user?.id || 'guest',
-      userEmail: user?.email || draft.email,
+      userEmail: user?.email || contact.email,
       items: cart.items,
       subtotal: cart.subtotal,
       tax: cart.tax,
@@ -95,13 +112,13 @@ export function PaymentPage() {
       divisionId: divs.size === 1 ? [...divs][0] : 'multiple',
       receipt,
       paymentStatus: 'awaiting_confirmation',
-      firstName: draft.firstName,
-      lastName: draft.lastName,
-      email: draft.email,
-      phone: draft.phone,
-      address: draft.address,
-      city: draft.city,
-      state: draft.state,
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      phone: contact.phone,
+      address: contact.address,
+      city: contact.city,
+      state: contact.state,
     })
     cart.items.forEach(i => {
       if (i.type === 'product' && i.productId) {
@@ -141,7 +158,11 @@ export function PaymentPage() {
           <h1 className="font-heading text-2xl font-bold flex items-center gap-2"><Landmark className="h-6 w-6 text-primary-700" /> Pay by Transfer</h1>
           <Badge variant="secondary">Step 2 of 2</Badge>
         </div>
-        <p className="text-sm text-gray-500 mt-1">Deliver to: {draft.address}, {draft.city} • {draft.phone}</p>
+        <p className="text-sm text-gray-500 mt-1">
+          {cart.fulfillment === 'delivery'
+            ? <>Deliver to: {contact.address}, {contact.city} • {contact.phone}</>
+            : <>Pickup — no delivery details needed • {contact.phone || contact.email}</>}
+        </p>
 
         {/* Ventures account — shown on every transfer */}
         <div className="mt-4 bg-primary-950 text-white rounded-xl p-5">
@@ -157,6 +178,15 @@ export function PaymentPage() {
         </div>
 
         <form onSubmit={submit} className="mt-5 space-y-4">
+          {!fallbackDraft && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 text-sm font-bold">Who is collecting?</div>
+              <Input label="First name *" value={guest.firstName} onChange={e => setGuest({ ...guest, firstName: e.target.value })} />
+              <Input label="Last name *" value={guest.lastName} onChange={e => setGuest({ ...guest, lastName: e.target.value })} />
+              <Input label="Email *" type="email" value={guest.email} onChange={e => setGuest({ ...guest, email: e.target.value })} />
+              <Input label="Phone *" value={guest.phone} onChange={e => setGuest({ ...guest, phone: e.target.value })} />
+            </div>
+          )}
           <div>
             <label className="text-sm font-medium">Upload proof of payment / receipt *</label>
             <div className="mt-2"><ReceiptUpload value={receipt} onChange={setReceipt} /></div>
