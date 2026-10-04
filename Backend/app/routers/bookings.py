@@ -4,12 +4,13 @@ import random
 import string
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.deps import ensure_division, get_current_user, ok, require_roles
 from app.db import get_db
 from app.models import Booking, Room, User
+from app.receipts import save_receipt_file
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -62,8 +63,44 @@ def get_booking(booking_id: str, db: Session = Depends(get_db), user: User = Dep
 
 
 @router.post("")
-def create_booking(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    room = db.query(Room).filter(Room.id == body.get("roomId")).first()
+async def create_booking(request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Accepts EITHER multipart (fields + receipt FILE in one request — atomic)
+    OR plain JSON (with a receipt URL from POST /upload/receipt)."""
+    content_type = request.headers.get("content-type", "")
+    if content_type.startswith("multipart/"):
+        form = await request.form()
+        try:
+            body = {
+                "roomId": form.get("roomId"),
+                "checkIn": form.get("checkIn"),
+                "checkOut": form.get("checkOut"),
+                "guests": int(form.get("guests", 2)),
+                "requests": form.get("requests"),
+                "firstName": form.get("firstName"),
+                "lastName": form.get("lastName"),
+                "email": form.get("email"),
+                "phone": form.get("phone"),
+                "ref": form.get("ref"),
+            }
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=422, detail="Malformed multipart fields")
+        receipt_file = form.get("receipt_file")
+        receipt_url = save_receipt_file(receipt_file) if receipt_file else None
+    else:
+        body = await request.json()
+        receipt_url = body.get("receipt")
+
+    if not receipt_url:
+        raise HTTPException(status_code=422, detail="Transfer receipt is required")
+
+    # Row lock: concurrent bookings for the last room serialize here, so only
+    # one can pass the availability check (ignored by SQLite, enforced by Postgres).
+    room = (
+        db.query(Room)
+        .filter(Room.id == body.get("roomId"))
+        .with_for_update()
+        .first()
+    )
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     if room.total_rooms - room.held_count(db) <= 0:
@@ -93,7 +130,7 @@ def create_booking(body: dict, db: Session = Depends(get_db), user: User = Depen
         method=body.get("method", "transfer"), ref=client_ref or make_ref("BK"),
         status="pending", payment_status="awaiting_confirmation",
         room_number=assign_room_number(db, room),
-        receipt=body.get("receipt"),
+        receipt=receipt_url,
         special_requests=body.get("requests") or body.get("specialRequests"),
         first_name=body.get("firstName"), last_name=body.get("lastName"),
         email=body.get("email"), phone=body.get("phone"),

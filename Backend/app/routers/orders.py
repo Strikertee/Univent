@@ -1,14 +1,16 @@
 """Orders: transfer + receipt flow. Totals recomputed server-side (never trusted)."""
 
+import json
 import random
 import string
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.core.deps import ensure_division, get_current_user, ok, require_roles
 from app.db import get_db
 from app.models import Order, OrderItem, Product, User
+from app.receipts import save_receipt_file
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -42,11 +44,34 @@ def get_order(order_id: str, db: Session = Depends(get_db), user: User = Depends
 
 
 @router.post("")
-def create_order(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+async def create_order(request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Accepts EITHER multipart (fields + receipt FILE in one request — atomic)
+    OR plain JSON (with a receipt URL from POST /upload/receipt)."""
+    content_type = request.headers.get("content-type", "")
+    if content_type.startswith("multipart/"):
+        form = await request.form()
+        try:
+            body = {
+                "items": json.loads(form.get("items", "[]")),
+                "divisionId": form.get("divisionId"),
+                "fulfillment": form.get("fulfillment", "pickup"),
+                "shippingAddress": json.loads(form.get("shippingAddress", "{}")),
+                "billingAddress": json.loads(form.get("billingAddress") or form.get("shippingAddress", "{}")),
+                "ref": form.get("ref"),
+                "notes": form.get("notes"),
+            }
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=422, detail="Malformed multipart fields")
+        receipt_file = form.get("receipt_file")
+        receipt_url = save_receipt_file(receipt_file) if receipt_file else None
+    else:
+        body = await request.json()
+        receipt_url = body.get("receipt")
+
     items = body.get("items", [])
     if not items:
         raise HTTPException(status_code=422, detail="Order needs at least one item")
-    if not body.get("receipt"):
+    if not receipt_url:
         raise HTTPException(status_code=422, detail="Transfer receipt is required")
 
     # Recompute lines from DB prices (products); room lines carry their stay total.
@@ -59,9 +84,16 @@ def create_order(body: dict, db: Session = Depends(get_db), user: User = Depends
             prod = db.query(Product).filter(Product.id == it["productId"]).first()
             if not prod or not prod.is_active:
                 raise HTTPException(status_code=422, detail=f"Product unavailable: {it.get('name')}")
-            if prod.stock < qty:
+            # ATOMIC stock guard: decrement only if enough remains. Concurrent
+            # buyers of the last unit can't both pass — exactly one wins.
+            won = (
+                db.query(Product)
+                .filter(Product.id == prod.id, Product.stock >= qty)
+                .update({Product.stock: Product.stock - qty}, synchronize_session="evaluate")
+            )
+            if not won:
+                db.rollback()
                 raise HTTPException(status_code=422, detail=f"Only {prod.stock} of {prod.name} available")
-            prod.stock = max(0, prod.stock - qty)
             divisions.add(prod.division_id)
             lines.append({"product": prod, "qty": qty, "price": prod.price, "item": it})
             subtotal += prod.price * qty
@@ -87,7 +119,7 @@ def create_order(body: dict, db: Session = Depends(get_db), user: User = Depends
         status="Processing", subtotal=subtotal, tax=0, shipping=shipping,
         total=subtotal + shipping, payment_status="awaiting_confirmation",
         payment_method="transfer", payment_reference=client_ref or make_ref(),
-        fulfillment=fulfillment, receipt=body.get("receipt"),
+        fulfillment=fulfillment, receipt=receipt_url,
         shipping_address=addr, billing_address=body.get("billingAddress", addr),
         notes=body.get("notes"),
     )

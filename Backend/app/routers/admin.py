@@ -5,11 +5,11 @@ from datetime import date
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.core.deps import ensure_division, get_current_user, ok, require_roles
 from app.core.security import hash_password
 from app.db import get_db
 from app.models import Booking, Cart, DailySale, Division, Order, User
+from app.receipts import save_receipt_file
 
 router = APIRouter(tags=["admin"])
 
@@ -157,22 +157,7 @@ def save_cart(body: dict, db: Session = Depends(get_db), user: User = Depends(ge
 # ---------- Receipt upload ----------
 @router.post("/upload/receipt")
 def upload_receipt(receipt: UploadFile = File(...), user: User = Depends(get_current_user)):
-    import os
-    import uuid
-    from datetime import datetime
-
-    if receipt.content_type not in ("image/jpeg", "image/png", "image/webp"):
-        raise HTTPException(status_code=422, detail="Receipt must be JPG, PNG or WebP")
-    data = receipt.file.read()
-    if len(data) > 8 * 1024 * 1024:
-        raise HTTPException(status_code=422, detail="Receipt too large (max 8MB)")
-    ext = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}[receipt.content_type]
-    folder = os.path.join(settings.upload_dir, "receipts", datetime.utcnow().strftime("%Y-%m"))
-    os.makedirs(folder, exist_ok=True)
-    name = f"{uuid.uuid4().hex}.{ext}"
-    with open(os.path.join(folder, name), "wb") as f:
-        f.write(data)
-    return ok({"url": f"/{folder}/{name}".replace(os.sep, "/")})
+    return ok({"url": save_receipt_file(receipt)})
 
 
 # ---------- Dashboard ----------
