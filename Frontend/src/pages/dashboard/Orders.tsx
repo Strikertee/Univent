@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 import { useShopData } from '../../store/shop'
+import { serverIdFor } from '../../services/idmap'
 import { formatCurrency } from '../../lib/utils'
 
 export function Orders() {
@@ -31,6 +32,9 @@ export function Orders() {
             <div className="flex justify-between items-start gap-3">
               <div>
                 <b>{o.ref}</b>
+                {o.id.startsWith('order-') && !serverIdFor(o.id) && (
+                  <Badge variant="outline" className="ml-2 text-[10px]">On this phone only — syncs when online</Badge>
+                )}
                 <div className="text-sm text-gray-500 break-words">{o.items.map(i => `${i.name} × ${i.quantity}`).join(', ')}</div>
                 <div className="text-xs text-gray-400 mt-1">{o.date} • Transfer • {o.fulfillment === 'delivery' ? 'Delivery' : 'Pickup'} • {o.address}, {o.city}</div>
                 <div className="font-bold mt-1 text-primary-700">{formatCurrency(o.total)}</div>

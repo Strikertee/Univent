@@ -114,13 +114,15 @@ export function saveOrder(order: Omit<SavedOrder, 'id' | 'date' | 'status'>): Sa
   }
   const all = read<SavedOrder>(ORDERS_KEY)
   write(ORDERS_KEY, [record, ...all])
-  void pushOrder(record) // background mirror to API when logged in with a real token
+  void mirrorOrder(record) // background mirror to API when logged in with a real token
   return record
 }
 
-/** Mirrors a local order to the backend (no-op offline or in demo mode). */
-async function pushOrder(record: SavedOrder): Promise<void> {
-  if (!hasRealToken()) return
+/** Mirrors a local order to the backend (no-op offline or in demo mode).
+ *  Returns true when the server has it. Skips records already mirrored. */
+export async function mirrorOrder(record: SavedOrder): Promise<boolean> {
+  if (!hasRealToken()) return false
+  if (serverIdFor(record.id)) return true
   try {
     const receiptUrl = await uploadDataUrlReceipt(record.receipt)
     const res = await api.getClient().post('/orders', {
@@ -139,8 +141,19 @@ async function pushOrder(record: SavedOrder): Promise<void> {
     }, { timeout: 15000 })
     const serverId = res.data?.data?.id
     if (serverId) rememberServerId(record.id, serverId)
+    return true
   } catch (error) {
     console.warn('Order API mirror failed (kept locally):', error)
+    return false
+  }
+}
+
+/** Retries every local-only order (created while offline). Server dedupes by ref. */
+export async function pushPendingOrders(): Promise<void> {
+  if (!hasRealToken()) return
+  const pending = read<SavedOrder>(ORDERS_KEY).filter(o => o.id.startsWith('order-') && !serverIdFor(o.id))
+  for (const order of pending) {
+    await mirrorOrder(order)
   }
 }
 
@@ -182,7 +195,7 @@ export function saveBooking(booking: Omit<SavedBooking, 'id' | 'date'>): SavedBo
   }
   const all = read<SavedBooking>(BOOKINGS_KEY)
   write(BOOKINGS_KEY, [record, ...all])
-  void pushBooking(record) // background mirror to API when logged in with a real token
+  void mirrorBooking(record) // background mirror to API when logged in with a real token
   return record
 }
 
@@ -196,12 +209,14 @@ function roomIdForSlug(slug: string): string | null {
   }
 }
 
-/** Mirrors a local booking to the backend (no-op offline or in demo mode). */
-async function pushBooking(record: SavedBooking): Promise<void> {
-  if (!hasRealToken()) return
+/** Mirrors a local booking to the backend (no-op offline or in demo mode).
+ *  Returns true when the server has it. */
+export async function mirrorBooking(record: SavedBooking): Promise<boolean> {
+  if (!hasRealToken()) return false
+  if (serverIdFor(record.id)) return true
   try {
     const roomId = roomIdForSlug(record.roomSlug)
-    if (!roomId) return
+    if (!roomId) return false
     const receiptUrl = await uploadDataUrlReceipt(record.receipt)
     const res = await api.getClient().post('/bookings', {
       ref: record.ref,
@@ -221,8 +236,19 @@ async function pushBooking(record: SavedBooking): Promise<void> {
     }, { timeout: 15000 })
     const serverId = res.data?.data?.id
     if (serverId) rememberServerId(record.id, serverId)
+    return true
   } catch (error) {
     console.warn('Booking API mirror failed (kept locally):', error)
+    return false
+  }
+}
+
+/** Retries every local-only booking (created while offline). Server dedupes by ref. */
+export async function pushPendingBookings(): Promise<void> {
+  if (!hasRealToken()) return
+  const pending = read<SavedBooking>(BOOKINGS_KEY).filter(b => b.id.startsWith('booking-') && !serverIdFor(b.id))
+  for (const booking of pending) {
+    await mirrorBooking(booking)
   }
 }
 

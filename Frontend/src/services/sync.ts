@@ -4,7 +4,7 @@
    behaves exactly as before — nothing breaks. */
 
 import { api, hasRealToken } from './api'
-import { BOOKINGS_KEY, ORDERS_KEY, SavedBooking, SavedOrder, emitShopChange } from '../store/shop'
+import { BOOKINGS_KEY, ORDERS_KEY, SavedBooking, SavedOrder, emitShopChange, pushPendingBookings, pushPendingOrders } from '../store/shop'
 import { PRODUCTS_KEY, ROOMS_KEY, emitCatalogChange } from '../store/catalog'
 import { SALES_KEY, DailySale, emitSalesChange } from '../store/sales'
 import { CART_UPDATED_KEY, replaceCartState } from '../context/CartContext'
@@ -75,12 +75,14 @@ export async function pullMine(): Promise<void> {
   }
 }
 
-/** Merge server records with local-only ones (same id → server copy wins).
- *  Pulls must NEVER delete local records the server hasn't seen yet —
- *  otherwise a pending order vanishes the moment you log back in. */
-function mergeById<T extends { id: string }>(server: T[], local: T[]): T[] {
+/** Merge server records with local-only ones. Same id OR same ref → server copy
+ *  wins; purely local records are preserved. Pulls must NEVER delete local
+ *  records the server hasn't seen yet — otherwise a pending order vanishes
+ *  the moment you log back in. */
+function mergeById<T extends { id: string; ref?: string }>(server: T[], local: T[]): T[] {
   const ids = new Set(server.map(r => r.id))
-  return [...server, ...local.filter(r => !ids.has(r.id))]
+  const refs = new Set(server.map(r => r.ref).filter(Boolean))
+  return [...server, ...local.filter(r => !ids.has(r.id) && !(r.ref && refs.has(r.ref)))]
 }
 
 function readKey<T>(key: string): T[] {
@@ -172,6 +174,9 @@ export async function pullAll(): Promise<void> {
   await pullMine()
   await pullCart()
   await pullDivisions()
+  // Anything created while offline gets a second chance to reach the server now.
+  await pushPendingOrders()
+  await pushPendingBookings()
 }
 
 /** Pull divisions (public) and merge with locally created ones. */

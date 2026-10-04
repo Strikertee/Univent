@@ -32,8 +32,23 @@ import { Settings } from './pages/admin/Settings'
 import { DailySales } from './pages/admin/DailySales'
 import { About, Careers, Press, Blog, Help, Contact, Faq, Shipping, Returns, Privacy, Terms, Cookies, AccessibilityM } from './pages/info/InfoPages'
 import { NotFound } from './pages/NotFound'
+import { useEffect } from 'react'
+import { hasRealToken } from './services/api'
+import { probeBackend, pullAll } from './services/sync'
 
 export function App() {
+  // Keep data fresh: every 45s, if this tab is visible and we're logged in
+  // with a real account, re-sync (new customer orders appear on admin screens).
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.hidden || !hasRealToken()) return
+      probeBackend().then(online => {
+        if (online) pullAll().catch(() => {})
+      })
+    }, 45000)
+    return () => clearInterval(id)
+  }, [])
+
   return (
     <Routes>
       <Route element={<MainLayout />}>

@@ -5,6 +5,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
 import { useShopData, SavedBooking } from '../../store/shop'
+import { serverIdFor } from '../../services/idmap'
 import { useCatalog } from '../../store/catalog'
 import { formatCurrency } from '../../lib/utils'
 
@@ -23,6 +24,9 @@ function BookingCard({ booking }: { booking: SavedBooking }) {
           <div className="flex justify-between items-start gap-3">
             <div>
               <b>{booking.ref} — {booking.roomName}</b>
+              {booking.id.startsWith('booking-') && !serverIdFor(booking.id) && (
+                <Badge variant="outline" className="ml-2 text-[10px]">On this phone only — syncs when online</Badge>
+              )}
               <div className="text-sm text-gray-500">{booking.checkIn} → {booking.checkOut} • {booking.nights} night(s) • {booking.guests} guest(s)</div>
               <div className="text-xs text-gray-400 mt-1">Booked {booking.date} • Transfer of {formatCurrency(booking.total)}</div>
             </div>
