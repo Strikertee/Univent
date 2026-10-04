@@ -95,9 +95,6 @@ function readKey<T>(key: string): T[] {
   }
 }
 
-function cartKey(item: CartItem): string {  return `${item.type}:${item.productId || item.roomId || item.facilityId || item.id}`
-}
-
 function readLocalCart(): { items: CartItem[]; fulfillment: 'pickup' | 'delivery'; updatedAt: string } {
   try {
     const raw = localStorage.getItem('univent_cart')
@@ -113,9 +110,9 @@ function readLocalCart(): { items: CartItem[]; fulfillment: 'pickup' | 'delivery
 }
 
 /**
- * Roaming cart: merges the server copy with this browser's copy so the account
- * sees the same cart on every phone. Union by item (quantities add up), newest
- * side wins for pickup/delivery. Never deletes anyone's items.
+ * Roaming cart: the newest side (server copy vs this browser's copy) wins
+ * outright, so the account sees the same cart on every phone and repeated
+ * logins converge instead of growing.
  */
 export async function pullCart(): Promise<void> {
   if (online !== true || !hasRealToken()) return
@@ -142,22 +139,20 @@ export async function pullCart(): Promise<void> {
       merged = { items: serverItems, fulfillment: server?.fulfillment || 'pickup' } as Cart
       ts = serverTs || new Date().toISOString()
     } else {
-      // Both sides have items → union, quantities add up, newest fulfillment wins.
-      const map = new Map<string, CartItem>()
-      for (const item of [...serverItems, ...local.items]) {
-        const key = cartKey(item)
-        const existing = map.get(key)
-        map.set(key, existing ? { ...existing, quantity: existing.quantity + item.quantity } : { ...item })
-      }
+      // Both sides have items → newest cart wins OUTRIGHT. (An earlier version
+      // summed quantities here, which doubled the cart on every login — the bug
+      // being fixed. Newest-wins converges: repeat logins are stable.)
       const serverNewer = serverTs >= local.updatedAt
-      merged = {
-        items: [...map.values()],
-        fulfillment: serverNewer ? (server?.fulfillment || 'pickup') : local.fulfillment,
-      } as Cart
-      ts = new Date().toISOString()
-      try {
-        await client.put('/cart', { items: merged.items, fulfillment: merged.fulfillment, updatedAt: ts }, { timeout: 12000 })
-      } catch { /* stays merged locally */ }
+      if (serverNewer) {
+        merged = { items: serverItems, fulfillment: server?.fulfillment || 'pickup' } as Cart
+        ts = serverTs || new Date().toISOString()
+      } else {
+        merged = { items: local.items, fulfillment: local.fulfillment } as Cart
+        ts = local.updatedAt || new Date().toISOString()
+        try {
+          await client.put('/cart', { items: merged.items, fulfillment: merged.fulfillment, updatedAt: ts }, { timeout: 12000 })
+        } catch { /* stays local until next edit */ }
+      }
     }
 
     safeWrite('univent_cart', merged)
