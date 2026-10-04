@@ -7,6 +7,47 @@ import { api, hasRealToken } from '../services/api'
 export const ROOMS_KEY = 'univent_rooms'
 export const PRODUCTS_KEY = 'univent_products'
 
+// Bump to repair browsers holding stale catalogue data (e.g. old Unsplash URLs).
+// Backfills ONLY missing/stale images — admin price/stock edits are preserved.
+const CATALOG_VERSION = 2
+const CATALOG_VERSION_KEY = 'univent_catalog_version'
+
+function staleImages(images: unknown): boolean {
+  if (!Array.isArray(images) || images.length === 0) return true
+  return images.some(img => typeof img === 'string' && img.includes('unsplash'))
+}
+
+function ensureFreshSeed() {
+  try {
+    if (localStorage.getItem(CATALOG_VERSION_KEY) === String(CATALOG_VERSION)) return
+    const seeds: Array<[string, Room[] | Product[]]> = [
+      [ROOMS_KEY, seedRooms],
+      [PRODUCTS_KEY, seedProducts],
+    ]
+    for (const [key, seedList] of seeds) {
+      let local: Array<{ id: string; images?: string[] }> = []
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '[]')
+        if (Array.isArray(parsed)) local = parsed
+      } catch { /* ignore */ }
+      if (local.length === 0) {
+        localStorage.setItem(key, JSON.stringify(seedList))
+        continue
+      }
+      const seedById = new Map(seedList.map(s => [s.id, s]))
+      const repaired = local.map(item => {
+        const seed = seedById.get(item.id)
+        if (seed && staleImages(item.images)) return { ...item, images: seed.images }
+        return item
+      })
+      localStorage.setItem(key, JSON.stringify(repaired))
+    }
+    localStorage.setItem(CATALOG_VERSION_KEY, String(CATALOG_VERSION))
+  } catch { /* ignore */ }
+}
+
+ensureFreshSeed()
+
 /** Re-render hook subscribers (used after a background API pull). */
 export function emitCatalogChange() {
   version += 1

@@ -3,22 +3,25 @@
 DIVISIONS = [
     {"id": "div-bakery", "name": "U.I. Bakery / U & I Fast Food", "slug": "bakery-fastfood",
      "description": "Fresh, hygienic, bromate-free bread and pastries from our ultra-modern bakery on U.I Ajibode road.",
-     "short_description": "Bromate-free bread, pastries & fast food", "icon": "🍞", "sort_order": 1},
+     "short_description": "Bromate-free bread, pastries & fast food", "icon": "🍞",
+     "banner_image": "/images/bakery/ui-bakery.jpg", "sort_order": 1},
     {"id": "div-petrol", "name": "U.I. Petrol Station", "slug": "petrol-station",
      "description": "Reliable fuel, lubricants, car wash and quick services.", "short_description": "Fuel, lubricants & auto care",
-     "icon": "⛽", "sort_order": 2},
+     "icon": "⛽", "banner_image": "/images/ui-petrol-station.jpg", "sort_order": 2},
     {"id": "div-printing", "name": "U.I. Printing Press", "slug": "printing-press",
      "description": "High-quality offset & digital printing.", "short_description": "Offset, digital & large format printing",
      "icon": "🖨️", "sort_order": 3},
     {"id": "div-hse", "name": "U.I. Health, Safety and Environment Unit", "slug": "health-safety",
      "description": "HSE consultancy, fumigation, waste management and safety training.",
-     "short_description": "HSE consultancy & fumigation", "icon": "🏥", "sort_order": 4},
+     "short_description": "HSE consultancy & fumigation", "icon": "🏥",
+     "banner_image": "/images/envinronmental/Garden-1.jpg", "sort_order": 4},
     {"id": "div-consult", "name": "U.I. Consultancy Services Unit", "slug": "consultancy",
      "description": "Academic, business and research consultancy.", "short_description": "Research & business consultancy",
      "icon": "💼", "sort_order": 5},
     {"id": "div-hotels", "name": "U.I. Hotels", "slug": "hotels",
      "description": "Comfortable accommodation from Deluxe Double to Premium Royal Suite, plus gym, pool, restaurant and conference facilities.",
-     "short_description": "Rooms, suites & event facilities", "icon": "🏨", "sort_order": 6},
+     "short_description": "Rooms, suites & event facilities", "icon": "🏨",
+     "banner_image": "/images/rooms/ui-hotels-2.webp", "sort_order": 6},
 ]
 
 CATEGORIES = [
@@ -31,8 +34,7 @@ CATEGORIES = [
 ]
 
 ROOMS = [
-    {"id": "room-double-deluxe", "name": "DOUBLE ROOM DELUXE", "slug": "double-room-deluxe",
-     "description": "Standard Room with 5x7 Bed, Sofa, Study Area, Couch", "short_description": "A Standard Room with 5x7 Bed, Sofa, Study Area, Couch",
+    {"id": "room-double-deluxe", "name": "DOUBLE ROOM DELUXE", "slug": "double-room-deluxe",     "description": "Standard Room with 5x7 Bed, Sofa, Study Area, Couch", "short_description": "A Standard Room with 5x7 Bed, Sofa, Study Area, Couch",
      "price": 30000, "category_id": "cat-standard", "division_id": "div-hotels",
      "capacity": 2, "bed_type": "Double", "bed_size": "5 x 7", "total_rooms": 20,
      "amenities": ["Free WiFi", "Air Conditioning", "DSTV", "Ensuite Bathroom", "Study Desk", "Wardrobe", "24/7 Power", "Room Service"],
@@ -89,6 +91,30 @@ FACILITIES = [
     ("fac-restaurant", "Restaurant & Bar", "restaurant", "Local & continental cuisine", "🍽️", False),
     ("fac-conference", "Conference Halls", "conference", "Events, weddings & conferences", "🎤", True),
 ]
+
+# Local frontend photos (same paths the React app serves from /public/images)
+ROOM_IMAGES = {
+    "room-double-deluxe": ["/images/rooms/room-1.jpg", "/images/rooms/room-2.jpg"],
+    "room-royal-standard": ["/images/rooms/room-2.jpg", "/images/rooms/ui-hotels-2.webp"],
+    "room-royal-executive": ["/images/rooms/royal-executive.webp", "/images/rooms/room-1.jpg"],
+    "room-luxury-king": ["/images/rooms/luxury-king-bed.webp", "/images/rooms/room-2.jpg"],
+    "room-executive-suite": ["/images/rooms/executive-suite.webp", "/images/rooms/ui-hotels-2.webp"],
+    "room-premium-royal": ["/images/rooms/premium-royal-suite.webp", "/images/rooms/room-1.jpg"],
+}
+
+PRODUCT_IMAGES = {
+    "prod-sardine": ["/images/bakery/sardine-bread.webp"],
+    "prod-white-300": ["/images/bakery/white-bread-1.webp"],
+    "prod-white-500": ["/images/bakery/white-bread-2.webp"],
+    "prod-white-1000": ["/images/bakery/white-bread-3.webp"],
+    "prod-wheat": ["/images/bakery/wheat-bread.webp"],
+    "prod-meatpie": ["/images/bakery/meat-pie.webp"],
+    "prod-chickenpie": ["/images/bakery/chicken-pie.webp"],
+    "prod-jamdough": ["/images/bakery/jam-doughnut.webp"],
+    "prod-eggbuns": ["/images/bakery/eggbuns.webp"],
+    "prod-milky": ["/images/bakery/milky-doughnut.webp"],
+    "prod-sausage": ["/images/bakery/sausage-roll.webp"],
+}
 
 ADMINS = [
     # (email, first, last, role, division_id) — password: "password" (change after first login)

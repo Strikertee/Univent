@@ -48,7 +48,11 @@ export function BakeryProducts() {
         {filtered.map((p, i) => (
           <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
             <Card className="overflow-hidden hover:-translate-y-1">
-              <Link to={`/division/bakery-fastfood/products/${p.slug}`}><div className="relative h-44 overflow-hidden"><img src={p.images[0]} alt={p.name} className="h-full w-full object-cover hover:scale-105 transition-transform" loading="lazy" />
+              <Link to={`/division/bakery-fastfood/products/${p.slug}`}><div className="relative h-44 overflow-hidden bg-secondary-100 flex items-center justify-center text-5xl"><span>🍞</span>
+                {p.images[0] && (
+                  <img src={p.images[0]} alt={p.name} className="absolute inset-0 h-full w-full object-cover hover:scale-105 transition-transform" loading="lazy"
+                    onError={e => { e.currentTarget.style.display = 'none' }} />
+                )}
                 {p.stock <= 0 && (
                   <span className="absolute inset-0 bg-primary-950/70 flex items-center justify-center text-center px-4">
                     <span className="text-secondary-400 font-extrabold text-sm">In the making —<br />fresh batch soon!</span>

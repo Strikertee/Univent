@@ -109,7 +109,13 @@ export function Dashboard() {
               const q = qtyInCart(p.id)
               return (
                 <div key={p.id} className="flex items-center gap-3 border rounded-xl p-2.5">
-                  <img src={p.images[0]} alt={p.name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
+                  <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-secondary-100 shrink-0 flex items-center justify-center text-2xl">
+                    <span>🍞</span>
+                    {p.images[0] && (
+                      <img src={p.images[0]} alt={p.name} className="absolute inset-0 h-full w-full object-cover"
+                        onError={e => { e.currentTarget.style.display = 'none' }} />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm truncate">{p.name}</div>
                     <div className="text-xs text-primary-700 font-bold truncate">{formatCurrency(p.price)} • {p.stock > 0 ? <span className="text-gray-500 font-normal">{p.stock} available</span> : <span className="text-secondary-600 font-semibold">In the making</span>}</div>
