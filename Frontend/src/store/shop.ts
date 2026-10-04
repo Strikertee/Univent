@@ -159,7 +159,13 @@ export async function pushPendingOrders(): Promise<void> {
 
 export function getOrders(userId?: string): SavedOrder[] {
   const all = read<SavedOrder>(ORDERS_KEY)
-  return userId ? all.filter(o => o.userId === userId) : all
+  const normalized = all.map(o => ({
+    ...o,
+    // Old records may carry receipt:true (boolean) from an earlier API shape —
+    // only real URL/data strings can render in an <img>.
+    receipt: typeof o.receipt === 'string' && o.receipt.length > 10 ? o.receipt : null,
+  }))
+  return userId ? normalized.filter(o => o.userId === userId) : normalized
 }
 
 export function updateOrder(id: string, patch: Partial<SavedOrder>): SavedOrder | null {
@@ -271,7 +277,7 @@ function normalizeBooking(b: SavedBooking): SavedBooking {
     paymentStatus,
     method: 'transfer',
     roomNumber: b.roomNumber ?? null,
-    receipt: (b as SavedBooking).receipt ?? null,
+    receipt: typeof b.receipt === 'string' && (b.receipt as string).length > 10 ? (b.receipt as string) : null,
     verifiedAt: b.verifiedAt ?? null,
     userId: b.userId || '',
     userEmail: b.userEmail || b.email || '',

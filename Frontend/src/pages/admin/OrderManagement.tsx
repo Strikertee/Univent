@@ -58,7 +58,7 @@ export function OrderManagement() {
                 </div>
                 {o.receipt && (
                   <button onClick={() => setReceiptView(o.id)} className="shrink-0 rounded-lg overflow-hidden border-2 border-primary-200 hover:border-primary-600">
-                    <img src={o.receipt} alt="Receipt" className="h-16 w-16 object-cover" />
+                    <img src={o.receipt} alt="Receipt" className="h-16 w-16 object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
                   </button>
                 )}
               </div>

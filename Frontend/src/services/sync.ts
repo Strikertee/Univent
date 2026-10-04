@@ -163,6 +163,16 @@ export async function pullCart(): Promise<void> {
   }
 }
 
+/** Lightweight live refresh: account data + cart only (no catalogue/divisions).
+ *  Used by the background poller so new orders, receipts and approvals appear
+ *  on both sides within seconds, without reloads. */
+export async function pullLive(): Promise<void> {
+  await pullMine()
+  await pullCart()
+  await pushPendingOrders()
+  await pushPendingBookings()
+}
+
 /** Full sync: catalogue for everyone, account data + cart when logged in with a real token. */
 export async function pullAll(): Promise<void> {
   await pullCatalogue()
